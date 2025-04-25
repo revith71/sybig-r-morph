@@ -1,0 +1,21 @@
+#SyBig-(r)-Morph: Greek Pseudoword Generator Tool
+
+# Web Framework
+Flask==2.3.3
+
+# Data Processing
+pandas==2.1.0
+numpy==1.25.2
+
+# String Comparison
+jellyfish==1.0.0
+
+# Greek Language Processing
+greek-accentuation==1.2.0
+
+# Excel File Support
+openpyxl==3.1.2
+xlrd==2.0.1
+
+# WSGI Server (for production)
+gunicorn==21.2.0

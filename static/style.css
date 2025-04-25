@@ -1,0 +1,23 @@
+/* static/css/style.css */
+
+/* Logo Container Styles */
+.logo-container {
+  display: flex;
+  justify-content: center;
+  text-align: center;
+  width: 100%;
+  margin: 20px auto;
+}
+
+/* Logo Styles */
+.logo {
+  max-width: 150px;
+  height: auto;
+}
+
+/* Responsive styles for mobile devices */
+@media (max-width: 768px) {
+  .logo {
+    max-width: 100px;
+  }
+}

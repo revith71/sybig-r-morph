@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SyBig-(r)-Morph: Greek Pseudoword Generator</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.2.3/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 20px;
+            padding-bottom: 40px;
+        }
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .header-logo {
+            max-height: 60px;
+            margin-right: 15px;
+        }
+        .word-item {
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+            margin-bottom: 8px;
+            transition: all 0.2s ease;
+        }
+        .word-item:hover {
+            background-color: #e9ecef;
+        }
+        .word-item.selected {
+            background-color: #d1e7dd;
+        }
+        .status-box {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .last-syllables-container {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 20px;
+        }
+        .form-check {
+            margin-bottom: 8px;
+        }
+        .syllable-selection-controls {
+            margin-bottom: 10px;
+        }
+        .result-words-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="d-flex align-items-center">
+                    <h1 class="display-5">SyBig-(r)-Morph: Greek Pseudoword Generator</h1>
+                </div>
+                <p class="lead">Generate well-formed Greek pseudowords from real Greek syllables</p>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="card-title mb-0">Lexicon Files</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Before generating pseudowords, make sure you have placed the following lexicon files in the <code>data/</code> folder:</p>
+                        <ul>
+                            <li><strong>GreekLex2.xlsx</strong> - Primary lexicon</li>
+                            <li><strong>all_num_clean_ns.xls</strong> - Secondary lexicon</li>
+                        </ul>
+                        <button id="loadLexiconsBtn" class="btn btn-primary w-100">
+                            <i class="fas fa-book"></i> Load Lexicons
+                        </button>
+                        <div id="lexiconStatus" class="mt-2"></div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="card-title mb-0">Generation Parameters</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="generationForm">
+                            <div class="mb-3">
+                                <label for="postype" class="form-label">Part of Speech:</label>
+                                <select id="postype" name="postype" class="form-select" disabled>
+                                    <option value="">Loading POS types...</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="num_syllables" class="form-label">Number of Syllables:</label>
+                                <select id="num_syllables" name="num_syllables" class="form-select">
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                    <option value="3" selected>3</option>
+                                    <option value="4">4</option>
+                                    <option value="5">5</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="freq_threshold" class="form-label">Frequency Threshold:</label>
+                                <input type="range" class="form-range" id="freq_threshold" name="freq_threshold" min="1" max="10" step="0.1" value="5">
+                                <div class="d-flex justify-content-between">
+                                    <small>More words</small>
+                                    <small id="freq_value">5.0</small>
+                                    <small>More frequent</small>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="sim_threshold" class="form-label">Similarity Threshold:</label>
+                                <input type="range" class="form-range" id="sim_threshold" name="sim_threshold" min="0.5" max="1" step="0.05" value="0.8">
+                                <div class="d-flex justify-content-between">
+                                    <small>More different</small>
+                                    <small id="sim_value">0.80</small>
+                                    <small>More similar</small>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="max_words" class="form-label">Maximum Words:</label>
+                                <input type="number" class="form-control" id="max_words" name="max_words" min="1" max="1000" value="20">
+                            </div>
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="add_stress" name="add_stress">
+                                <label class="form-check-label" for="add_stress">Add stress to pseudowords</label>
+                            </div>
+                            <button type="button" id="getLastSyllablesBtn" class="btn btn-info w-100 mb-3" disabled>
+                                <i class="fas fa-filter"></i> Get Last Syllables
+                            </button>
+                            <button type="submit" id="generateBtn" class="btn btn-success w-100" disabled>
+                                <i class="fas fa-magic"></i> Generate Pseudowords
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-8">
+                <div class="card mb-4" id="lastSyllablesCard" style="display: none;">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="card-title mb-0">Last Syllables Selection</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="syllable-selection-controls">
+                            <button id="selectAllSyllables" class="btn btn-sm btn-outline-primary me-2">Select All</button>
+                            <button id="deselectAllSyllables" class="btn btn-sm btn-outline-secondary">Deselect All</button>
+                            <span id="selectedSyllablesCount" class="ms-3 badge bg-primary">0 selected</span>
+                        </div>
+                        <div class="last-syllables-container" id="lastSyllablesContainer">
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Loading available last syllables...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="card-title mb-0">Generation Status</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="status-box" id="statusBox">
+                            <p class="text-muted text-center">Generation status will appear here.</p>
+                        </div>
+                        <div class="loading-spinner" id="loadingSpinner">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Generating pseudowords...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="card-title mb-0">Generated Pseudowords</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="result-words-container" id="resultWordsContainer">
+                            <p class="text-muted text-center">Generated pseudowords will appear here.</p>
+                        </div>
+                        <div class="text-center mt-3">
+                            <button id="downloadCSVBtn" class="btn btn-outline-primary" disabled>
+                                <i class="fas fa-download"></i> Download as CSV
+                            </button>
+                            <button id="copyBtn" class="btn btn-outline-secondary ms-2" disabled>
+                                <i class="fas fa-copy"></i> Copy to Clipboard
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.2.3/js/bootstrap.bundle.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            let selectedLastSyllables = [];
+            let generatedWords = [];
+            
+            // Update range sliders value display
+            $('#freq_threshold').on('input', function() {
+                $('#freq_value').text(parseFloat($(this).val()).toFixed(1));
+            });
+            
+            $('#sim_threshold').on('input', function() {
+                $('#sim_value').text(parseFloat($(this).val()).toFixed(2));
+            });
+            
+            // Load lexicons
+            $('#loadLexiconsBtn').click(function() {
+                $('#lexiconStatus').html('<div class="spinner-border spinner-border-sm text-primary" role="status"></div> Loading lexicons...');
+                
+                $.ajax({
+                    url: '/load_lexicons',
+                    type: 'POST',
+                    success: function(response) {
+                        if (response.success) {
+                            $('#lexiconStatus').html('<div class="alert alert-success py-1">Lexicons loaded successfully!</div>');
+                            
+                            // Enable form elements
+                            $('#postype').prop('disabled', false);
+                            $('#generateBtn').prop('disabled', false);
+                            $('#getLastSyllablesBtn').prop('disabled', false);
+                            
+                            // Populate POS dropdown
+                            const posSelect = $('#postype');
+                            posSelect.empty();
+                            
+                            // Add "all" option
+                            posSelect.append($('<option>', {
+                                value: 'all',
+                                text: 'All Types'
+                            }));
+                            
+                            // Add individual POS options
+                            $.each(response.available_pos, function(i, pos) {
+                                posSelect.append($('<option>', {
+                                    value: pos,
+                                    text: capitalizeFirstLetter(pos)
+                                }));
+                            });
+                            
+                            // Update status display
+                            updateStatusDisplay(response.status);
+                        } else {
+                            $('#lexiconStatus').html('<div class="alert alert-danger py-1">' + response.message + '</div>');
+                            updateStatusDisplay(response.status);
+                        }
+                    },
+                    error: function() {
+                        $('#lexiconStatus').html('<div class="alert alert-danger py-1">Server error. Please try again.</div>');
+                    }
+                });
+            });
+            
+            // Get Last Syllables
+            $('#getLastSyllablesBtn').click(function() {
+                const formData = $('#generationForm').serialize();
+                $('#lastSyllablesContainer').html('<div class="text-center py-4"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Loading available last syllables...</p></div>');
+                $('#lastSyllablesCard').show();
+                
+                $.ajax({
+                    url: '/get_last_syllables',
+                    type: 'POST',
+                    data: formData,
+                    success: function(response) {
+                        if (response.success) {
+                            renderLastSyllables(response.last_syllables);
+                            updateStatusDisplay(response.status);
+                        } else {
+                            $('#lastSyllablesContainer').html('<div class="alert alert-danger">' + response.message + '</div>');
+                            updateStatusDisplay(response.status);
+                        }
+                    },
+                    error: function() {
+                        $('#lastSyllablesContainer').html('<div class="alert alert-danger">Server error. Please try again.</div>');
+                    }
+                });
+            });
+            
+            // Generate pseudowords
+            $('#generationForm').submit(function(e) {
+                e.preventDefault();
+                
+                $('#loadingSpinner').show();
+                $('#statusBox').html('<p class="text-center">Starting generation...</p>');
+                $('#resultWordsContainer').html('<p class="text-center">Waiting for results...</p>');
+                $('#downloadCSVBtn').prop('disabled', true);
+                $('#copyBtn').prop('disabled', true);
+                
+                // Build form data
+                const formData = new FormData(this);
+                
+                // Add selected last syllables if any
+                if (selectedLastSyllables.length > 0) {
+                    selectedLastSyllables.forEach(syllable => {
+                        formData.append('selected_last_syllables[]', syllable);
+                    });
+                }
+                
+                // Convert checkbox value to boolean string
+                formData.set('add_stress', $('#add_stress').prop('checked') ? 'true' : 'false');
+                
+                $.ajax({
+                    url: '/generate',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        $('#loadingSpinner').hide();
+                        
+                        if (response.success) {
+                            generatedWords = response.pseudowords;
+                            displayGeneratedWords(generatedWords);
+                            $('#downloadCSVBtn').prop('disabled', false);
+                            $('#copyBtn').prop('disabled', false);
+                        } else {
+                            $('#resultWordsContainer').html('<div class="alert alert-danger">' + response.message + '</div>');
+                        }
+                        
+                        updateStatusDisplay(response.status);
+                    },
+                    error: function() {
+                        $('#loadingSpinner').hide();
+                        $('#statusBox').append('<p class="text-danger">Server error. Please try again.</p>');
+                        $('#resultWordsContainer').html('<div class="alert alert-danger">Server error. Please try again.</div>');
+                    }
+                });
+            });
+            
+            // Download CSV
+            $('#downloadCSVBtn').click(function() {
+                const formData = new FormData($('#generationForm')[0]);
+                
+                // Add ordered words
+                formData.append('ordered_words', JSON.stringify(generatedWords));
+                
+                // Add selected last syllables if any
+                if (selectedLastSyllables.length > 0) {
+                    selectedLastSyllables.forEach(syllable => {
+                        formData.append('selected_last_syllables[]', syllable);
+                    });
+                }
+                
+                // Convert checkbox value to boolean string
+                formData.set('add_stress', $('#add_stress').prop('checked') ? 'true' : 'false');
+                
+                // Create a form to submit
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/download_csv';
+                
+                // Add all form data as hidden inputs
+                for (const pair of formData.entries()) {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = pair[0];
+                    input.value = pair[1];
+                    form.appendChild(input);
+                }
+                
+                document.body.appendChild(form);
+                form.submit();
+                document.body.removeChild(form);
+            });
+            
+            // Copy to clipboard
+            $('#copyBtn').click(function() {
+                const textToCopy = generatedWords.join('\n');
+                navigator.clipboard.writeText(textToCopy).then(function() {
+                    // Flash the button to indicate success
+                    const $btn = $('#copyBtn');
+                    $btn.removeClass('btn-outline-secondary').addClass('btn-success');
+                    $btn.html('<i class="fas fa-check"></i> Copied!');
+                    
+                    setTimeout(function() {
+                        $btn.removeClass('btn-success').addClass('btn-outline-secondary');
+                        $btn.html('<i class="fas fa-copy"></i> Copy to Clipboard');
+                    }, 2000);
+                }).catch(function() {
+                    alert('Failed to copy to clipboard');
+                });
+            });
+            
+            // Handle select/deselect all syllables
+            $('#selectAllSyllables').click(function() {
+                $('.syllable-checkbox').prop('checked', true);
+                updateSelectedSyllables();
+            });
+            
+            $('#deselectAllSyllables').click(function() {
+                $('.syllable-checkbox').prop('checked', false);
+                updateSelectedSyllables();
+            });
+            
+            // Helper functions
+            function capitalizeFirstLetter(string) {
+                return string.charAt(0).toUpperCase() + string.slice(1);
+            }
+            
+            function updateStatusDisplay(statusMessages) {
+                if (!statusMessages || statusMessages.length === 0) return;
+                
+                const $statusBox = $('#statusBox');
+                $statusBox.empty();
+                
+                statusMessages.forEach(function(status) {
+                    const timeClass = status.message.startsWith('ERROR') ? 'text-danger' : 'text-muted';
+                    const messageClass = status.message.startsWith('ERROR') ? 'text-danger' : '';
+                    
+                    $statusBox.append(
+                        `<p class="mb-1">
+                            <small class="${timeClass}">${status.time}</small>
+                            <span class="${messageClass}">${status.message}</span>
+                        </p>`
+                    );
+                });
+                
+                // Scroll to bottom
+                $statusBox.scrollTop($statusBox[0].scrollHeight);
+            }
+            
+            function renderLastSyllables(syllables) {
+                const $container = $('#lastSyllablesContainer');
+                $container.empty();
+                
+                if (!syllables || syllables.length === 0) {
+                    $container.html('<div class="alert alert-warning">No last syllables found for the selected parameters.</div>');
+                    return;
+                }
+                
+                // Sort syllables alphabetically
+                syllables.sort();
+                
+                // Build the checkboxes
+                const $checkboxesContainer = $('<div class="row"></div>');
+                
+                syllables.forEach(function(syllable, index) {
+                    const $checkboxDiv = $(
+                        `<div class="col-md-3 col-sm-4 col-6">
+                            <div class="form-check">
+                                <input class="form-check-input syllable-checkbox" type="checkbox" 
+                                    value="${syllable}" id="syllable_${index}" checked>
+                                <label class="form-check-label" for="syllable_${index}">
+                                    ${syllable}
+                                </label>
+                            </div>
+                        </div>`
+                    );
+                    
+                    $checkboxesContainer.append($checkboxDiv);
+                });
+                
+                $container.append($checkboxesContainer);
+                
+                // Set up event handlers for checkboxes
+                $('.syllable-checkbox').change(updateSelectedSyllables);
+                
+                // Initialize selected syllables
+                updateSelectedSyllables();
+            }
+            
+            function updateSelectedSyllables() {
+                selectedLastSyllables = [];
+                
+                $('.syllable-checkbox:checked').each(function() {
+                    selectedLastSyllables.push($(this).val());
+                });
+                
+                // Update the counter
+                $('#selectedSyllablesCount').text(`${selectedLastSyllables.length} selected`);
+            }
+            
+            function displayGeneratedWords(words) {
+                const $container = $('#resultWordsContainer');
+                $container.empty();
+                
+                if (!words || words.length === 0) {
+                    $container.html('<div class="alert alert-warning">No pseudowords were generated. Try adjusting parameters.</div>');
+                    return;
+                }
+                
+                const $wordsList = $('<div class="row"></div>');
+                
+                words.forEach(function(word, index) {
+                    const $wordItem = $(
+                        `<div class="col-md-4 col-sm-6">
+                            <div class="word-item" data-index="${index}">
+                                ${word}
+                            </div>
+                        </div>`
+                    );
+                    
+                    $wordsList.append($wordItem);
+                });
+                
+                $container.append($wordsList);
+                
+                // Add click handler for word selection
+                $('.word-item').click(function() {
+                    $(this).toggleClass('selected');
+                });
+            }
+        });
+    </script>
+</body>
+</html>

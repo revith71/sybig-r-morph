@@ -274,6 +274,130 @@
             border: 1px solid #f5c2c7 !important;
             border-radius: 5px;
         }
+
+        /* Syllable selection container */
+        .syllable-selector {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-top: 10px;
+            margin-bottom: 20px;
+            background-color: #f9f9f9;
+            display: none; /* Hidden by default */
+        }
+
+        /* Syllable selection item */
+        .syllable-item {
+            display: inline-block;
+            margin: 3px;
+            padding: 5px 10px;
+            background-color: #4BA3B8; /* Teal/blue color when selected */
+            border: 1px solid #409aaf;
+            color: white;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        /* Add this style for non-selected state */
+        .syllable-item:not(.selected) {
+            background-color: white; /* White background when deselected */
+            color: #333; /* Dark text color for better visibility */
+            border-color: #409aaf; /* Keep the same border color */
+        }
+
+        /* Keep the same style for selected state */
+        .syllable-item.selected {
+            background-color: #4BA3B8;
+            color: white;
+            border-color: #409aaf;
+        }
+        
+        /* Make status text color match "Deselect All" button */
+        #syllable-status {
+            color: #6c757d !important; /* Bootstrap's default gray for text-muted */
+        }
+        
+        /* Update the show/hide button hover state */
+        #show-syllables-btn:hover,
+        #show-syllables-btn:active,
+        #show-syllables-btn:focus,
+        #select-all-syllables:hover,
+        #select-all-syllables:active,
+        #select-all-syllables:focus {
+            background-color: #eb5950 !important;
+            border-color: #d45148 !important;
+        }
+        
+        /* Custom checkbox styling for green color */
+        .form-check-input:checked {
+            background-color: #009AB2 !important; /* Bootstrap success green */
+            border-color: #009AB2 !important;
+        }
+        
+        .form-check-input:focus {
+            border-color: #009AB2 !important;
+            box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25) !important;
+        }
+        
+        /* For WebKit browsers (Safari, Chrome) - custom checkbox appearance */
+        .form-check-input[type="checkbox"] {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            width: 1.125rem;
+            height: 1.125rem;
+            border: 1px solid #dee2e6;
+            border-radius: 0.25rem;
+            background-color: #fff;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: contain;
+        }
+        
+        .form-check-input[type="checkbox"]:checked {
+            background-color: #009AB2 !important;
+            border-color: #009AB2 !important;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='m6 10 3 3 6-6'/%3e%3c/svg%3e") !important;
+        }
+        
+        .form-check-input[type="checkbox"]:indeterminate {
+            background-color: #009AB2 !important;
+            border-color: #009AB2 !important;
+        }
+        
+        /* Keep helper text on one line - more specific selector */
+        .col-md-8 .form-text.text-muted {
+            white-space: nowrap !important;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        /* Alternative: make the container wider for the stress section */
+        .row .col-md-8 {
+            flex: 0 0 100% !important;
+            max-width: 100% !important;
+        }
+        
+        /* Make the Apply Greek Stress Rules button coral */
+        #apply-stress-rules-btn {
+            background-color: #FF645A !important; /* Coral */
+            border-color: #eb5950 !important;
+            color: white !important;
+        }
+        #apply-stress-rules-btn:hover,
+        #apply-stress-rules-btn:active,
+        #apply-stress-rules-btn:focus,
+        #apply-stress-rules-btn.active {
+            background-color: #eb5950 !important;
+            border-color: #d45148 !important;
+            color: white !important;
+        }
+        
+        /* Add space between Generated Pseudowords and Stress Assignment sections */
+        #stress-section {
+            margin-top: 20px !important;
+        }
     </style>
 </head>
 <body>
@@ -351,11 +475,11 @@
                         <div class="col-md-6">
                             <label for="freq_threshold" class="form-label">Frequency Threshold:</label>
                             <input type="range" class="form-range" id="freq_threshold" name="freq_threshold" 
-                                min="1.327 " max="7.533" step="0.1" value="3.5">
+                                min="1.327" max="7.533" step="0.001" value="4.327">
                             <div class="d-flex justify-content-between">
-                                <small>1.327</small>
+                                <small class="text-muted">Less frequent</small>
                                 <small id="freq_threshold_value">5.0</small>
-                                <small>7.533</small>
+                                <small class="text-muted">More frequent</small>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -363,9 +487,43 @@
                             <input type="range" class="form-range" id="sim_threshold" name="sim_threshold" 
                                 min="0.0" max="1.0" step="0.1" value="0.8">
                             <div class="d-flex justify-content-between">
-                                <small>0.0</small>
+                                <small class="text-muted">Less similar</small>
                                 <small id="sim_threshold_value">0.8</small>
-                                <small>1.0</small>
+                                <small class="text-muted">More similar</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Last Syllable Selection Section -->
+                    <div class="mb-3">
+                        <label class="form-label">Last Syllable Selection:</label>
+                        <div class="d-flex align-items-center">
+                            <button type="button" id="show-syllables-btn" class="btn me-3" 
+                                    style="background-color: #FF645A; border-color: #eb5950; color: white;" 
+                                    {% if not lexicons_loaded %}disabled{% endif %}>
+                                Show Available Last Syllables
+                            </button>
+                            <span id="syllable-status" class="small" style="color: #6c757d;">No syllables selected</span>
+                        </div>
+                        <div id="syllable-selector" class="syllable-selector">
+                            <div class="mb-2 d-flex justify-content-between">
+                                <div>
+                                    <button type="button" id="select-all-syllables" class="btn btn-sm" 
+                                            style="background-color: #FF645A; border-color: #eb5950; color: white;">
+                                        Select All
+                                    </button>
+                                    <button type="button" id="deselect-all-syllables" class="btn btn-sm btn-outline-secondary"
+                                            style="background-color: #f8f9fa; border-color: #ced4da; color: #6c757d;">
+                                        Deselect All
+                                    </button>
+                                </div>
+                                <div>
+                                    <input type="text" id="search-syllables" class="form-control form-control-sm" placeholder="Search syllables...">
+                                </div>
+                            </div>
+                            <div id="syllable-list" class="mt-2">
+                                <!-- Syllables will be loaded here -->
+                                <p class="text-center">Loading syllables...</p>
                             </div>
                         </div>
                     </div>
@@ -430,6 +588,82 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Stress Assignment Section -->
+        <div class="card mb-4" id="stress-section">
+            <div class="card-header">
+                <h5>Stress Assignment</h5>
+            </div>
+            <div class="card-body">
+                <!-- Input area for words -->
+                <div class="mb-3">
+                    <label class="form-label">Greek Words (one per line):</label>
+                    <textarea id="stress-input" class="form-control" rows="6" 
+                        placeholder="Paste your pseudowords here or click 'Import Generated Words'"></textarea>
+                </div>
+                
+                <!-- Stress options -->
+                <div class="row mb-3">
+                    <div class="col-md-8">
+                        <label class="form-label">Stress Pattern:</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="stress-antepenult" value="antepenult">
+                            <label class="form-check-label" for="stress-antepenult">
+                                Antepenult (APU) - third to last syllable
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="stress-penult" value="penult">
+                            <label class="form-check-label" for="stress-penult">
+                                Penult (PU) - second to last syllable
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="stress-ultima" value="ultima">
+                            <label class="form-check-label" for="stress-ultima">
+                                Ultima (U) - last syllable
+                            </label>
+                        </div>
+                        <small class="form-text text-muted mt-2">
+                            Multiple selections: Use 'Apply Greek Stress Rules'. Single selection: Use 'Apply Stress'.
+                        </small>
+                    </div>
+                </div>
+                
+                <!-- Action buttons -->
+                <div class="mb-3">
+                    <button id="import-words-btn" class="btn btn-outline-secondary" disabled>
+                        Import Generated Words
+                    </button>
+                    <button id="apply-stress-rules-btn" class="btn btn-primary" disabled>
+                        Apply Greek Stress Rules
+                    </button>
+                    <button id="apply-stress-btn" class="btn btn-success" disabled>
+                        Apply Stress
+                    </button>
+                    <button id="clear-stress-btn" class="btn btn-outline-secondary">
+                        Clear
+                    </button>
+                </div>
+                
+                <!-- Results -->
+                <div class="mb-3">
+                    <label class="form-label">Stressed Words:</label>
+                    <textarea id="stress-output" class="form-control" rows="6" readonly 
+                        placeholder="Stressed words will appear here..."></textarea>
+                </div>
+                
+                <!-- Export options -->
+                <div>
+                    <button id="copy-stressed-btn" class="btn btn-outline-secondary" disabled>
+                        Copy Stressed Words
+                    </button>
+                    <button id="download-stressed-csv-btn" class="btn btn-outline-secondary" disabled>
+                        Download Stressed CSV
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
@@ -453,8 +687,305 @@
             const simThresholdValue = document.getElementById('sim_threshold_value');
             const lexiconErrorAlert = document.getElementById('lexicon-error-alert');
             
+            // New elements for the syllable selection feature
+            const showSyllablesBtn = document.getElementById('show-syllables-btn');
+            const syllableSelector = document.getElementById('syllable-selector');
+            const syllableList = document.getElementById('syllable-list');
+            const syllableStatus = document.getElementById('syllable-status');
+            const selectAllSyllablesBtn = document.getElementById('select-all-syllables');
+            const deselectAllSyllablesBtn = document.getElementById('deselect-all-syllables');
+            const searchSyllablesInput = document.getElementById('search-syllables');
+            
+            // Stress assignment elements
+            const stressInput = document.getElementById('stress-input');
+            const stressOutput = document.getElementById('stress-output');
+            const importWordsBtn = document.getElementById('import-words-btn');
+            const applyStressRulesBtn = document.getElementById('apply-stress-rules-btn');
+            const applyStressBtn = document.getElementById('apply-stress-btn');
+            const clearStressBtn = document.getElementById('clear-stress-btn');
+            const copyStressedBtn = document.getElementById('copy-stressed-btn');
+            const downloadStressedCsvBtn = document.getElementById('download-stressed-csv-btn');
+            const stressAntepenultCheck = document.getElementById('stress-antepenult');
+            const stressPenultCheck = document.getElementById('stress-penult');
+            const stressUltimaCheck = document.getElementById('stress-ultima');
+            
+            // Store available last syllables
+            let availableLastSyllables = [];
+            let selectedLastSyllables = [];
+            
             // Drag and drop functionality
             let draggedItem = null;
+            
+            // Function to apply Greek stress rules automatically
+            function applyGreekStressRules() {
+                const pseudowords = Array.from(document.querySelectorAll('#pseudoword-container .pseudoword'))
+                    .map(el => el.textContent);
+                
+                if (pseudowords.length === 0) {
+                    addStatusMessage('No pseudowords to apply stress to. Please generate pseudowords first.', 'error');
+                    return;
+                }
+                
+                // Get the current part of speech selection
+                const partOfSpeech = document.getElementById('postype').value;
+                
+                // Show loading
+                loading.style.display = 'block';
+                addStatusMessage('Applying Greek stress rules...');
+                
+                // Send request to apply stress
+                fetch('/apply_stress_rules', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        words: pseudowords,
+                        part_of_speech: partOfSpeech
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    loading.style.display = 'none';
+                    
+                    if (data.success) {
+                        // Update the stress input area with the stressed words
+                        stressInput.value = data.stressed_words.join('\n');
+                        
+                        // Also update the stress output to show the stressed words
+                        stressOutput.value = data.stressed_words.join('\n');
+                        
+                        // Enable the export buttons for stressed words
+                        copyStressedBtn.disabled = false;
+                        downloadStressedCsvBtn.disabled = false;
+                        
+                        addStatusMessage(`Applied Greek stress rules to ${data.stressed_words.length} pseudowords using part of speech: ${partOfSpeech}`, 'success');
+                        
+                        // Update status if provided
+                        if (data.status && data.status.length > 0) {
+                            updateStatus(data.status);
+                        }
+                    } else {
+                        addStatusMessage('Error applying stress rules: ' + data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    loading.style.display = 'none';
+                    addStatusMessage('Error applying stress rules: ' + error.message, 'error');
+                });
+            }
+            
+            // Greek stress assignment functionality
+            function countSyllables(word) {
+                // Greek vowels (including diphthongs)
+                const vowels = /[αεηιοωυάέήίόώύΐΰ]/g;
+                const diphthongs = /[αεο][ιυ]|[ηω][υ]|υι/g;
+                
+                // Count vowel groups, treating diphthongs as single syllables
+                let syllableCount = 0;
+                let processedWord = word.toLowerCase();
+                
+                // First, mark diphthongs
+                const diphthongMatches = [...processedWord.matchAll(diphthongs)];
+                let diphthongPositions = [];
+                diphthongMatches.forEach(match => {
+                    for (let i = match.index; i < match.index + match[0].length; i++) {
+                        diphthongPositions.push(i);
+                    }
+                });
+                
+                // Count vowels that aren't part of diphthongs
+                for (let i = 0; i < processedWord.length; i++) {
+                    if (vowels.test(processedWord[i]) && !diphthongPositions.includes(i)) {
+                        syllableCount++;
+                    }
+                }
+                
+                // Add diphthongs as single syllables
+                syllableCount += diphthongMatches.length;
+                
+                return Math.max(1, syllableCount); // Ensure at least 1 syllable
+            }
+            
+            function findVowelPositions(word) {
+                const vowels = /[αεηιοωυάέήίόώύΐΰ]/;
+                const diphthongs = /[αεο][ιυ]|[ηω][υ]|υι/g;
+                
+                let positions = [];
+                let processedWord = word.toLowerCase();
+                
+                // Find diphthongs first
+                const diphthongMatches = [...processedWord.matchAll(diphthongs)];
+                let diphthongRanges = [];
+                diphthongMatches.forEach(match => {
+                    diphthongRanges.push({start: match.index, end: match.index + match[0].length - 1});
+                    positions.push(match.index); // Position of the diphthong (first character)
+                });
+                
+                // Find individual vowels that aren't part of diphthongs
+                for (let i = 0; i < processedWord.length; i++) {
+                    if (vowels.test(processedWord[i])) {
+                        let isInDiphthong = diphthongRanges.some(range => i >= range.start && i <= range.end);
+                        if (!isInDiphthong) {
+                            positions.push(i);
+                        }
+                    }
+                }
+                
+                return positions.sort((a, b) => a - b);
+            }
+            
+            function addStressToWord(word, position) {
+                // Remove any existing stress marks first
+                let cleanWord = word.replace(/[άέήίόώύΐΰ]/g, (match) => {
+                    const stressMap = {
+                        'ά': 'α', 'έ': 'ε', 'ή': 'η', 'ί': 'ι', 'ό': 'ο', 'ώ': 'ω', 'ύ': 'υ',
+                        'ΐ': 'ι', 'ΰ': 'υ'
+                    };
+                    return stressMap[match] || match;
+                });
+                
+                const vowelPositions = findVowelPositions(cleanWord);
+                const syllableCount = vowelPositions.length;
+                
+                if (syllableCount === 0) return word;
+                
+                let targetSyllable;
+                
+                // Determine which syllable to stress based on position
+                switch(position) {
+                    case 'ultima':
+                        targetSyllable = syllableCount - 1;
+                        break;
+                    case 'penult':
+                        targetSyllable = Math.max(0, syllableCount - 2);
+                        break;
+                    case 'antepenult':
+                        targetSyllable = Math.max(0, syllableCount - 3);
+                        break;
+                    default:
+                        return word;
+                }
+                
+                // For words with fewer syllables than required, default to first syllable
+                if (targetSyllable >= syllableCount) {
+                    targetSyllable = 0;
+                }
+                
+                const vowelIndex = vowelPositions[targetSyllable];
+                
+                // Check if this vowel is part of a diphthong and handle accordingly
+                const stressedWord = applyStressAtPosition(cleanWord, vowelIndex);
+                return stressedWord;
+            }
+            
+            function applyStressAtPosition(word, vowelIndex) {
+                const diphthongs = {
+                    'αι': 'αί', 'ει': 'εί', 'οι': 'οί', 
+                    'αυ': 'αύ', 'ευ': 'εύ', 'ηυ': 'ηύ', 
+                    'ου': 'ού', 'υι': 'υί'
+                };
+                
+                let result = word.split('');
+                const lowerWord = word.toLowerCase();
+                
+                // Check if this vowel is the start of a diphthong
+                for (let [diphthong, stressedDiphthong] of Object.entries(diphthongs)) {
+                    if (vowelIndex < lowerWord.length - 1 && 
+                        lowerWord.slice(vowelIndex, vowelIndex + 2) === diphthong) {
+                        // Replace the diphthong with its stressed version
+                        result[vowelIndex] = stressedDiphthong[0];
+                        result[vowelIndex + 1] = stressedDiphthong[1];
+                        return result.join('');
+                    }
+                }
+                
+                // Check if this vowel is the second part of a diphthong
+                if (vowelIndex > 0) {
+                    for (let [diphthong, stressedDiphthong] of Object.entries(diphthongs)) {
+                        if (lowerWord.slice(vowelIndex - 1, vowelIndex + 1) === diphthong) {
+                            // Replace the diphthong with its stressed version
+                            result[vowelIndex - 1] = stressedDiphthong[0];
+                            result[vowelIndex] = stressedDiphthong[1];
+                            return result.join('');
+                        }
+                    }
+                }
+                
+                // If not part of a diphthong, apply single vowel stress
+                const vowelChar = lowerWord[vowelIndex];
+                const stressMap = {
+                    'α': 'ά', 'ε': 'έ', 'η': 'ή', 'ι': 'ί', 'ο': 'ό', 'ω': 'ώ', 'υ': 'ύ'
+                };
+                
+                if (stressMap[vowelChar]) {
+                    result[vowelIndex] = stressMap[vowelChar];
+                }
+                
+                return result.join('');
+            }
+            
+            function applyStressToWords() {
+                const inputText = stressInput.value.trim();
+                if (!inputText) {
+                    addStatusMessage('No words to stress', 'error');
+                    return;
+                }
+                
+                // Get selected stress positions
+                const selectedPositions = [];
+                if (stressAntepenultCheck.checked) selectedPositions.push('antepenult');
+                if (stressPenultCheck.checked) selectedPositions.push('penult');
+                if (stressUltimaCheck.checked) selectedPositions.push('ultima');
+                
+                if (selectedPositions.length === 0) {
+                    addStatusMessage('Please select at least one stress position', 'error');
+                    return;
+                }
+                
+                const words = inputText.split('\n').filter(word => word.trim() !== '');
+                const stressedWords = [];
+                
+                words.forEach((word, index) => {
+                    const cleanWord = word.trim();
+                    if (!cleanWord) return;
+                    
+                    const syllableCount = countSyllables(cleanWord);
+                    let stressPosition;
+                    
+                    if (selectedPositions.length === 1) {
+                        // Single position selected
+                        stressPosition = selectedPositions[0];
+                    } else {
+                        // Multiple positions selected - distribute evenly
+                        if (syllableCount === 2) {
+                            // For 2-syllable words, use 50-50 distribution between ultima and penult
+                            const validPositions = selectedPositions.filter(pos => 
+                                pos === 'ultima' || pos === 'penult'
+                            );
+                            if (validPositions.length > 0) {
+                                stressPosition = validPositions[index % validPositions.length];
+                            } else {
+                                stressPosition = selectedPositions[index % selectedPositions.length];
+                            }
+                        } else {
+                            // For 3+ syllable words, distribute evenly among all selected positions
+                            stressPosition = selectedPositions[index % selectedPositions.length];
+                        }
+                    }
+                    
+                    const stressedWord = addStressToWord(cleanWord, stressPosition);
+                    stressedWords.push(stressedWord);
+                });
+                
+                stressOutput.value = stressedWords.join('\n');
+                
+                // Enable export buttons
+                copyStressedBtn.disabled = false;
+                downloadStressedCsvBtn.disabled = false;
+                
+                addStatusMessage(`Applied stress to ${stressedWords.length} words using ${selectedPositions.join(', ')} distribution`);
+            }
             
             function addDragListeners(element) {
                 element.setAttribute('draggable', 'true');
@@ -512,13 +1043,200 @@
                 }, { offset: Number.NEGATIVE_INFINITY }).element;
             }
             
-            // Update range value displays
+            // Update range value displays with 2 decimal places
             freqThreshold.addEventListener('input', function() {
-                freqThresholdValue.textContent = this.value;
+                // Get the raw value
+                const value = parseFloat(this.value);
+                
+                // Format with 2 decimal places
+                freqThresholdValue.textContent = value.toFixed(2);
+            });
+
+            simThreshold.addEventListener('input', function() {
+                // Get the raw value
+                const value = parseFloat(this.value);
+                
+                // Always show at least 1 decimal place
+                simThresholdValue.textContent = value.toFixed(1);
             });
             
-            simThreshold.addEventListener('input', function() {
-                simThresholdValue.textContent = this.value;
+            // Function to fetch available syllables
+            function fetchAvailableSyllables() {
+                const postype = document.getElementById('postype').value;
+                const numSyllables = document.getElementById('num_syllables').value;
+                const freqThreshold = document.getElementById('freq_threshold').value;
+                
+                // Show loading state
+                syllableList.innerHTML = '<p class="text-center">Loading syllables...</p>';
+                
+                // Create form data
+                const formData = new FormData();
+                formData.append('postype', postype);
+                formData.append('num_syllables', numSyllables);
+                formData.append('freq_threshold', freqThreshold);
+                
+                // Send request to server
+                fetch('/get_syllables', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Store available syllables
+                        availableLastSyllables = data.last_syllables || [];
+                        // Initially select all syllables
+                        selectedLastSyllables = [...availableLastSyllables];
+                        
+                        // Update syllable status
+                        updateSyllableStatus();
+                        
+                        // Generate syllable selection interface
+                        renderSyllableList();
+                        
+                        // Update status messages if they were returned
+                        if (data.status && data.status.length > 0) {
+                            updateStatus(data.status);
+                        }
+                    } else {
+                        // Show error message
+                        syllableList.innerHTML = `<p class="text-danger text-center">Error: ${data.message || 'Could not load syllables'}</p>`;
+                        addStatusMessage('Error loading syllables: ' + (data.message || 'Unknown error'), 'error');
+                        
+                        // Update status messages if they were returned
+                        if (data.status && data.status.length > 0) {
+                            updateStatus(data.status);
+                        }
+                    }
+                })
+                .catch(error => {
+                    syllableList.innerHTML = `<p class="text-danger text-center">Error: ${error.message}</p>`;
+                    addStatusMessage('Error loading syllables: ' + error.message, 'error');
+                });
+            }
+            
+            // Function to update syllable status display
+            function updateSyllableStatus() {
+                if (selectedLastSyllables.length === 0) {
+                    syllableStatus.textContent = 'No syllables selected';
+                    syllableStatus.className = 'small text-danger';
+                } else if (selectedLastSyllables.length === availableLastSyllables.length) {
+                    syllableStatus.textContent = 'All syllables selected';
+                    syllableStatus.className = 'small text-success';
+                } else {
+                    syllableStatus.textContent = `${selectedLastSyllables.length} of ${availableLastSyllables.length} syllables selected`;
+                    syllableStatus.className = 'small text-primary';
+                }
+            }
+            
+            // Function to render the syllable selection list
+            function renderSyllableList() {
+                syllableList.innerHTML = '';
+                
+                // Get search term
+                const searchTerm = searchSyllablesInput.value.toLowerCase();
+                
+                // Filter syllables based on search
+                const filteredSyllables = availableLastSyllables.filter(syllable => 
+                    syllable.toLowerCase().includes(searchTerm)
+                );
+                
+                if (filteredSyllables.length === 0) {
+                    syllableList.innerHTML = `<p class="text-center">No syllables match your search</p>`;
+                    return;
+                }
+                
+                // Create a syllable element for each filtered syllable
+                filteredSyllables.forEach(syllable => {
+                    const syllableElement = document.createElement('div');
+                    syllableElement.className = 'syllable-item';
+                    if (selectedLastSyllables.includes(syllable)) {
+                        syllableElement.className += ' selected';
+                    }
+                    syllableElement.textContent = syllable;
+                    syllableElement.dataset.syllable = syllable;
+                    
+                    // Add click event to toggle selection
+                    syllableElement.addEventListener('click', function() {
+                        toggleSyllableSelection(this);
+                    });
+                    
+                    syllableList.appendChild(syllableElement);
+                });
+            }
+            
+            // Function to toggle syllable selection
+            function toggleSyllableSelection(element) {
+                const syllable = element.dataset.syllable;
+                
+                if (element.classList.contains('selected')) {
+                    // Deselect
+                    element.classList.remove('selected');
+                    selectedLastSyllables = selectedLastSyllables.filter(s => s !== syllable);
+                } else {
+                    // Select
+                    element.classList.add('selected');
+                    selectedLastSyllables.push(syllable);
+                }
+                
+                // Update status display
+                updateSyllableStatus();
+            }
+            
+            // Show available syllables when button is clicked
+            showSyllablesBtn.addEventListener('click', function() {
+                // Toggle visibility
+                if (syllableSelector.style.display === 'block') {
+                    syllableSelector.style.display = 'none';
+                    showSyllablesBtn.textContent = 'Show Available Last Syllables';
+                } else {
+                    syllableSelector.style.display = 'block';
+                    showSyllablesBtn.textContent = 'Hide Available Last Syllables';
+                    
+                    // Fetch available syllables if not already fetched or parameters changed
+                    fetchAvailableSyllables();
+                }
+            });
+            
+            // Update syllables when parameters change
+            document.getElementById('postype').addEventListener('change', function() {
+                if (syllableSelector.style.display === 'block') {
+                    fetchAvailableSyllables();
+                }
+            });
+            
+            document.getElementById('num_syllables').addEventListener('change', function() {
+                if (syllableSelector.style.display === 'block') {
+                    fetchAvailableSyllables();
+                }
+            });
+            
+            freqThreshold.addEventListener('change', function() {
+                if (syllableSelector.style.display === 'block') {
+                    fetchAvailableSyllables();
+                }
+            });
+            
+            // Handle select all and deselect all buttons
+            selectAllSyllablesBtn.addEventListener('click', function() {
+                selectedLastSyllables = [...availableLastSyllables];
+                document.querySelectorAll('.syllable-item').forEach(item => {
+                    item.classList.add('selected');
+                });
+                updateSyllableStatus();
+            });
+            
+            deselectAllSyllablesBtn.addEventListener('click', function() {
+                selectedLastSyllables = [];
+                document.querySelectorAll('.syllable-item').forEach(item => {
+                    item.classList.remove('selected');
+                });
+                updateSyllableStatus();
+            });
+            
+            // Handle syllable search
+            searchSyllablesInput.addEventListener('input', function() {
+                renderSyllableList();
             });
             
             // Load Lexicons
@@ -578,6 +1296,7 @@
                             
                         posSelect.disabled = false;
                         generateBtn.disabled = false;
+                        showSyllablesBtn.disabled = false;
                         addStatusMessage('Lexicons loaded successfully', 'success');
                     } else {
                         // Show error message
@@ -623,6 +1342,9 @@
                 // Get form data
                 const formData = new FormData(generateForm);
                 
+                // Add selected last syllables data
+                formData.append('included_last_syllables', JSON.stringify(selectedLastSyllables));
+                
                 // Send request
                 fetch('/generate', {
                     method: 'POST',
@@ -655,6 +1377,8 @@
                             downloadCsvBtn.disabled = false;
                             sortAlphaBtn.disabled = false;
                             sortRandomBtn.disabled = false;
+                            importWordsBtn.disabled = false; // Enable import button when words are generated
+                            applyStressRulesBtn.disabled = false; // Enable stress rules button when words are generated
                         } else {
                             pseudowordContainer.innerHTML = '<p>No pseudowords were generated. Try adjusting parameters.</p>';
                         }
@@ -741,6 +1465,9 @@
                 const currentWords = Array.from(document.querySelectorAll('#pseudoword-container .pseudoword'))
                     .map(el => el.textContent);
                 
+                // Add selected last syllables data
+                formData.append('included_last_syllables', JSON.stringify(selectedLastSyllables));
+                
                 // Create a form submission for downloading with ordered words
                 const form = document.createElement('form');
                 form.method = 'POST';
@@ -772,6 +1499,101 @@
                     loading.style.display = 'none';
                     addStatusMessage('CSV download initiated with current word order');
                 }, 1000);
+            });
+            
+            // Stress assignment event listeners
+            importWordsBtn.addEventListener('click', function() {
+                const pseudowords = Array.from(document.querySelectorAll('#pseudoword-container .pseudoword'))
+                    .map(el => el.textContent);
+                
+                if (pseudowords.length === 0) {
+                    addStatusMessage('No generated words to import. Please generate pseudowords first.', 'error');
+                    return;
+                }
+                
+                stressInput.value = pseudowords.join('\n');
+                addStatusMessage(`Imported ${pseudowords.length} words for stress assignment`);
+                
+                // Enable apply stress button if at least one position is selected
+                checkStressButtonState();
+            });
+            
+            // Add event listener for the new stress rules button
+            applyStressRulesBtn.addEventListener('click', applyGreekStressRules);
+            
+            function checkStressButtonState() {
+                const hasWords = stressInput.value.trim() !== '';
+                const hasSelectedPosition = stressAntepenultCheck.checked || 
+                                          stressPenultCheck.checked || 
+                                          stressUltimaCheck.checked;
+                
+                applyStressBtn.disabled = !(hasWords && hasSelectedPosition);
+            }
+            
+            // Check stress button state when checkboxes change
+            [stressAntepenultCheck, stressPenultCheck, stressUltimaCheck].forEach(checkbox => {
+                checkbox.addEventListener('change', checkStressButtonState);
+            });
+            
+            // Check stress button state when input changes
+            stressInput.addEventListener('input', checkStressButtonState);
+            
+            applyStressBtn.addEventListener('click', function() {
+                applyStressToWords();
+            });
+            
+            clearStressBtn.addEventListener('click', function() {
+                stressInput.value = '';
+                stressOutput.value = '';
+                copyStressedBtn.disabled = true;
+                downloadStressedCsvBtn.disabled = true;
+                checkStressButtonState();
+                addStatusMessage('Stress assignment area cleared');
+            });
+            
+            copyStressedBtn.addEventListener('click', function() {
+                const stressedWords = stressOutput.value;
+                if (!stressedWords.trim()) {
+                    addStatusMessage('No stressed words to copy', 'error');
+                    return;
+                }
+                
+                navigator.clipboard.writeText(stressedWords).then(function() {
+                    addStatusMessage('Copied stressed words to clipboard');
+                }, function() {
+                    addStatusMessage('Failed to copy stressed words to clipboard', 'error');
+                });
+            });
+            
+            downloadStressedCsvBtn.addEventListener('click', function() {
+                const stressedWords = stressOutput.value.trim();
+                if (!stressedWords) {
+                    addStatusMessage('No stressed words to download', 'error');
+                    return;
+                }
+                
+                // Create CSV content
+                const words = stressedWords.split('\n').filter(word => word.trim() !== '');
+                let csvContent = '\ufeff'; // BOM for UTF-8
+                csvContent += 'Stressed_Pseudoword\n';
+                words.forEach(word => {
+                    csvContent += `"${word.trim()}"\n`;
+                });
+                
+                // Create and download file
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                
+                const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
+                link.setAttribute('download', `stressed_pseudowords_${timestamp}.csv`);
+                
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                addStatusMessage(`Downloaded CSV with ${words.length} stressed words`);
             });
             
             // Helper functions
@@ -810,7 +1632,7 @@
                         const messageElement = document.createElement('div');
                         messageElement.className = 'status-message';
                         
-// Add error class for error messages
+                        // Add error class for error messages
                         if (status.message.includes('ERROR:') || status.message.includes('Error:')) {
                             messageElement.classList.add('error');
                         }

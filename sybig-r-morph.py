@@ -1,2917 +1,578 @@
-{
- "cells": [
-  {
-   "cell_type": "code",
-   "execution_count": 1,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "import itertools\n",
-    "import jellyfish\n",
-    "import numpy as np\n",
-    "import os\n",
-    "import pandas as pd\n",
-    "import unicodedata as und"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 2,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "from greek_accentuation.syllabify import syllabify, display_word,ultima,penult,antepenult\n",
-    "from greek_accentuation.accentuation import get_accent_type, display_accent_type\n",
-    "from greek_accentuation.characters import *"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 3,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "#define function remove oxia. Remove diacritic is a function that returns a function.\n",
-    "remove_oxia=remove_diacritic(\"\\u0301\")\n",
-    "#remove_oxia(a)"
-   ]
-  },
-  {
-   "cell_type": "markdown",
-   "metadata": {},
-   "source": [
-    "#### Import first lexicon"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 4,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "df1=pd.read_excel(\"GreekLex2.xlsx\")"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 5,
-   "metadata": {},
-   "outputs": [
-    {
-     "data": {
-      "text/html": [
-       "<div>\n",
-       "<style scoped>\n",
-       "    .dataframe tbody tr th:only-of-type {\n",
-       "        vertical-align: middle;\n",
-       "    }\n",
-       "\n",
-       "    .dataframe tbody tr th {\n",
-       "        vertical-align: top;\n",
-       "    }\n",
-       "\n",
-       "    .dataframe thead th {\n",
-       "        text-align: right;\n",
-       "    }\n",
-       "</style>\n",
-       "<table border=\"1\" class=\"dataframe\">\n",
-       "  <thead>\n",
-       "    <tr style=\"text-align: right;\">\n",
-       "      <th></th>\n",
-       "      <th>Word</th>\n",
-       "      <th>Length</th>\n",
-       "      <th>LemmaFreq</th>\n",
-       "      <th>WordFreq</th>\n",
-       "      <th>zipfFreq</th>\n",
-       "      <th>Syllables</th>\n",
-       "      <th>SyllLength</th>\n",
-       "      <th>StressPosition</th>\n",
-       "      <th>MeanSylFreq(Stress-types-lemmas)</th>\n",
-       "      <th>MeanSylFreq(Stress-tokens-lemmas)</th>\n",
-       "      <th>...</th>\n",
-       "      <th>OrthEndingTokCount</th>\n",
-       "      <th>OrthEndingNconsistency(tokens)</th>\n",
-       "      <th>PhonEnding</th>\n",
-       "      <th>PhonEndingTypCount</th>\n",
-       "      <th>PhonEndingNconsistency(types)</th>\n",
-       "      <th>PhonEndingTokCount</th>\n",
-       "      <th>PhonEndingNconsistency(tokens)</th>\n",
-       "      <th>Pos</th>\n",
-       "      <th>Unnamed: 65</th>\n",
-       "      <th>Unnamed: 66</th>\n",
-       "    </tr>\n",
-       "  </thead>\n",
-       "  <tbody>\n",
-       "    <tr>\n",
-       "      <th>0</th>\n",
-       "      <td>η</td>\n",
-       "      <td>1</td>\n",
-       "      <td>6881.6</td>\n",
-       "      <td>16881.6</td>\n",
-       "      <td>7.227</td>\n",
-       "      <td>η</td>\n",
-       "      <td>1</td>\n",
-       "      <td>-</td>\n",
-       "      <td>4030.68</td>\n",
-       "      <td>23276.42</td>\n",
-       "      <td>...</td>\n",
-       "      <td>19451.1</td>\n",
-       "      <td>86.79</td>\n",
-       "      <td>i</td>\n",
-       "      <td>5</td>\n",
-       "      <td>80.0</td>\n",
-       "      <td>19558.4</td>\n",
-       "      <td>86.86</td>\n",
-       "      <td>article</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>1</th>\n",
-       "      <td>ή</td>\n",
-       "      <td>1</td>\n",
-       "      <td>2569.5</td>\n",
-       "      <td>2569.5</td>\n",
-       "      <td>6.410</td>\n",
-       "      <td>ή</td>\n",
-       "      <td>1</td>\n",
-       "      <td>1</td>\n",
-       "      <td>817.31</td>\n",
-       "      <td>5087.50</td>\n",
-       "      <td>...</td>\n",
-       "      <td>19451.1</td>\n",
-       "      <td>13.21</td>\n",
-       "      <td>i</td>\n",
-       "      <td>5</td>\n",
-       "      <td>20.0</td>\n",
-       "      <td>19558.4</td>\n",
-       "      <td>13.14</td>\n",
-       "      <td>conj</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>2</th>\n",
-       "      <td>ο</td>\n",
-       "      <td>1</td>\n",
-       "      <td>8628.1</td>\n",
-       "      <td>12445.5</td>\n",
-       "      <td>7.095</td>\n",
-       "      <td>ο</td>\n",
-       "      <td>1</td>\n",
-       "      <td>-</td>\n",
-       "      <td>18665.47</td>\n",
-       "      <td>29496.00</td>\n",
-       "      <td>...</td>\n",
-       "      <td>12445.5</td>\n",
-       "      <td>100.00</td>\n",
-       "      <td>o</td>\n",
-       "      <td>2</td>\n",
-       "      <td>100.0</td>\n",
-       "      <td>12456.4</td>\n",
-       "      <td>100.00</td>\n",
-       "      <td>article</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>3</th>\n",
-       "      <td>αμ</td>\n",
-       "      <td>2</td>\n",
-       "      <td>2.9</td>\n",
-       "      <td>2.9</td>\n",
-       "      <td>3.464</td>\n",
-       "      <td>αμ</td>\n",
-       "      <td>1</td>\n",
-       "      <td>-</td>\n",
-       "      <td>461.05</td>\n",
-       "      <td>101.40</td>\n",
-       "      <td>...</td>\n",
-       "      <td>2.9</td>\n",
-       "      <td>100.00</td>\n",
-       "      <td>am</td>\n",
-       "      <td>1</td>\n",
-       "      <td>100.0</td>\n",
-       "      <td>2.9</td>\n",
-       "      <td>100.00</td>\n",
-       "      <td>no_tag</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>4</th>\n",
-       "      <td>αν</td>\n",
-       "      <td>2</td>\n",
-       "      <td>2484.8</td>\n",
-       "      <td>2135.1</td>\n",
-       "      <td>6.329</td>\n",
-       "      <td>αν</td>\n",
-       "      <td>1</td>\n",
-       "      <td>-</td>\n",
-       "      <td>936.07</td>\n",
-       "      <td>2785.69</td>\n",
-       "      <td>...</td>\n",
-       "      <td>2135.1</td>\n",
-       "      <td>100.00</td>\n",
-       "      <td>an</td>\n",
-       "      <td>2</td>\n",
-       "      <td>50.0</td>\n",
-       "      <td>2135.8</td>\n",
-       "      <td>99.97</td>\n",
-       "      <td>conj</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "    </tr>\n",
-       "  </tbody>\n",
-       "</table>\n",
-       "<p>5 rows × 67 columns</p>\n",
-       "</div>"
-      ],
-      "text/plain": [
-       "  Word  Length  LemmaFreq  WordFreq  zipfFreq Syllables  SyllLength  \\\n",
-       "0    η       1     6881.6   16881.6     7.227         η           1   \n",
-       "1    ή       1     2569.5    2569.5     6.410         ή           1   \n",
-       "2    ο       1     8628.1   12445.5     7.095         ο           1   \n",
-       "3   αμ       2        2.9       2.9     3.464        αμ           1   \n",
-       "4   αν       2     2484.8    2135.1     6.329        αν           1   \n",
-       "\n",
-       "  StressPosition  MeanSylFreq(Stress-types-lemmas)  \\\n",
-       "0              -                           4030.68   \n",
-       "1              1                            817.31   \n",
-       "2              -                          18665.47   \n",
-       "3              -                            461.05   \n",
-       "4              -                            936.07   \n",
-       "\n",
-       "   MeanSylFreq(Stress-tokens-lemmas)  ...  OrthEndingTokCount  \\\n",
-       "0                           23276.42  ...             19451.1   \n",
-       "1                            5087.50  ...             19451.1   \n",
-       "2                           29496.00  ...             12445.5   \n",
-       "3                             101.40  ...                 2.9   \n",
-       "4                            2785.69  ...              2135.1   \n",
-       "\n",
-       "   OrthEndingNconsistency(tokens)  PhonEnding  PhonEndingTypCount  \\\n",
-       "0                           86.79           i                   5   \n",
-       "1                           13.21           i                   5   \n",
-       "2                          100.00           o                   2   \n",
-       "3                          100.00          am                   1   \n",
-       "4                          100.00          an                   2   \n",
-       "\n",
-       "   PhonEndingNconsistency(types)  PhonEndingTokCount  \\\n",
-       "0                           80.0             19558.4   \n",
-       "1                           20.0             19558.4   \n",
-       "2                          100.0             12456.4   \n",
-       "3                          100.0                 2.9   \n",
-       "4                           50.0              2135.8   \n",
-       "\n",
-       "  PhonEndingNconsistency(tokens)      Pos Unnamed: 65 Unnamed: 66  \n",
-       "0                          86.86  article         NaN         NaN  \n",
-       "1                          13.14     conj         NaN         NaN  \n",
-       "2                         100.00  article         NaN         NaN  \n",
-       "3                         100.00   no_tag         NaN         NaN  \n",
-       "4                          99.97     conj         NaN         NaN  \n",
-       "\n",
-       "[5 rows x 67 columns]"
-      ]
-     },
-     "execution_count": 5,
-     "metadata": {},
-     "output_type": "execute_result"
-    }
-   ],
-   "source": [
-    "df1.head()"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 6,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "# remove oxia from all entries of the lexicon\n",
-    "df1.Word = df1['Word'].apply(remove_oxia)"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 7,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "df = df1[\"Word\"]"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 8,
-   "metadata": {},
-   "outputs": [
-    {
-     "data": {
-      "text/plain": [
-       "0                             η\n",
-       "1                             η\n",
-       "2                             ο\n",
-       "3                            αμ\n",
-       "4                            αν\n",
-       "                  ...          \n",
-       "35277     εθνικοαπελευθερωτικος\n",
-       "35278     επαναδιαπραγματευομαι\n",
-       "35279     κοινωνιογλωσσολογικος\n",
-       "35280     ωτορινολαρυγγολογικος\n",
-       "35281    ηλεκτροεγκεφαλογραφημα\n",
-       "Name: Word, Length: 35282, dtype: object"
-      ]
-     },
-     "execution_count": 8,
-     "metadata": {},
-     "output_type": "execute_result"
-    }
-   ],
-   "source": [
-    "df"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 9,
-   "metadata": {},
-   "outputs": [
-    {
-     "data": {
-      "text/plain": [
-       "array(['adj', 'adv', 'article', 'conj', 'excl', 'no_tag', 'noun', 'part',\n",
-       "       'prep', 'pron', 'properN', 'quant', 'verb'], dtype=object)"
-      ]
-     },
-     "execution_count": 9,
-     "metadata": {},
-     "output_type": "execute_result"
-    }
-   ],
-   "source": [
-    "np.unique(df1.Pos.values)"
-   ]
-  },
-  {
-   "cell_type": "markdown",
-   "metadata": {},
-   "source": [
-    "### Import second lexicon  -CLEAN"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 10,
-   "metadata": {},
-   "outputs": [
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "            ID         spel     freq            CVtyp  Nlet  Nphon  Nsyl  \\\n",
-      "0            1            α  451.668                V     1      1     1   \n",
-      "1            2          αβα    1.353             V.CV     3      3     2   \n",
-      "2            3       αβαδες    0.034         V.CV.CVC     6      6     3   \n",
-      "3            4       αβαεια    0.034         V.CV.V.V     6      5     4   \n",
-      "4            5       αβαειο    0.406         V.CV.V.V     6      5     4   \n",
-      "...        ...          ...      ...              ...   ...    ...   ...   \n",
-      "206616  206617  ωχροκιτρινα    0.034  V.CCV.CV.CCV.CV    11     11     5   \n",
-      "206617  206618        ωχρος    0.169           V.CCVC     5      5     2   \n",
-      "206618  206619     ωχροτατη    0.034      V.CCV.CV.CV     8      8     4   \n",
-      "206619  206620        ωχρου    0.034            V.CCV     5      4     2   \n",
-      "206620  206621       ωχρους    0.034           V.CCVC     6      5     2   \n",
-      "\n",
-      "        StrSyl  BGtokfreqLet  BGtokfreqLetS  ...  mPGprobTyp  mPGprobTok  \\\n",
-      "0            0         0.000          5.858  ...      25.641      25.641   \n",
-      "1            0         0.274          1.266  ...      22.901      23.556   \n",
-      "2            0         0.541          1.095  ...      20.407      20.629   \n",
-      "3            0         0.622          1.181  ...      14.570      15.616   \n",
-      "4            0         0.535          1.021  ...      13.772      14.811   \n",
-      "...        ...           ...            ...  ...         ...         ...   \n",
-      "206616       0         0.583          0.658  ...      18.827      17.910   \n",
-      "206617       0         0.306          0.498  ...      15.123      15.459   \n",
-      "206618       0         0.849          0.877  ...      17.517      18.363   \n",
-      "206619       0         0.462          0.558  ...      17.995      17.786   \n",
-      "206620       0         0.530          0.686  ...      15.999      16.300   \n",
-      "\n",
-      "        mGPprobTyp  mGPprobTok  minSGprobTyp  minSGprobTok  minPGprobTyp  \\\n",
-      "0           11.874      11.755       0.09445       0.08260       0.02564   \n",
-      "1           11.884      11.805       0.00894       0.00637       0.01827   \n",
-      "2           11.834      11.733       0.00894       0.00637       0.01000   \n",
-      "3           11.873      11.753       0.00880       0.00637       0.00213   \n",
-      "4           11.879      11.768       0.00880       0.00637       0.00213   \n",
-      "...            ...         ...           ...           ...           ...   \n",
-      "206616      10.113      10.373       0.00806       0.00739       0.00629   \n",
-      "206617      10.996      10.537       0.00806       0.00739       0.00629   \n",
-      "206618      11.324      11.003       0.00806       0.00739       0.00629   \n",
-      "206619      10.779      10.233       0.00806       0.00739       0.00629   \n",
-      "206620      10.996      10.547       0.00806       0.00739       0.00629   \n",
-      "\n",
-      "        minPGprobTok  minGPprobTyp  minGPprobTok  \n",
-      "0            0.02564       0.01187       0.01175  \n",
-      "1            0.01988       0.01187       0.01175  \n",
-      "2            0.01150       0.01154       0.01119  \n",
-      "3            0.00277       0.01184       0.01160  \n",
-      "4            0.00277       0.01184       0.01160  \n",
-      "...              ...           ...           ...  \n",
-      "206616       0.00597       0.00341       0.00559  \n",
-      "206617       0.00597       0.00800       0.00671  \n",
-      "206618       0.00597       0.00800       0.00671  \n",
-      "206619       0.00597       0.00800       0.00671  \n",
-      "206620       0.00597       0.00800       0.00671  \n",
-      "\n",
-      "[206621 rows x 62 columns]\n"
-     ]
-    }
-   ],
-   "source": [
-    "# path to your Excel workbook\n",
-    "excel_file = pd.ExcelFile('all_num_clean_ns.xls')\n",
-    "\n",
-    "# Create an empty list to store the individual DataFrames\n",
-    "dfs = []\n",
-    "\n",
-    "# Iterate over each sheet name in the workbook\n",
-    "for sheet_name in excel_file.sheet_names:\n",
-    "    # Read the sheet into a DataFrame\n",
-    "    dftemp = excel_file.parse(sheet_name)\n",
-    "    \n",
-    "    # Append the DataFrame to the list\n",
-    "    dfs.append(dftemp)\n",
-    "\n",
-    "# Concatenate all DataFrames into a single DataFrame\n",
-    "combined_df = pd.concat(dfs, ignore_index=True)\n",
-    "\n",
-    "# Print the combined DataFrame\n",
-    "print(combined_df)"
-   ]
-  },
-  {
-   "cell_type": "markdown",
-   "metadata": {},
-   "source": [
-    "### Create inputs from the first lexicon"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 11,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "# Κρατώ μόνο τα ουσιαστικά και απο αυτά απορρίπτω τα 'σπάνια' zipfFreq > fthres\n",
-    "fthres = 5\n",
-    "postype = 'noun' # Can be one of the string in np.unique(df1.Pos.values)\n",
-    "df = df[(df1.Pos == postype) & (df1.zipfFreq > fthres)]"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 12,
-   "metadata": {},
-   "outputs": [
-    {
-     "data": {
-      "text/plain": [
-       "array(['ζωη', 'που', 'ωρα', 'αξια', 'αρχη', 'βαση', 'βημα', 'γκολ',\n",
-       "       'εργο', 'ετος'], dtype=object)"
-      ]
-     },
-     "execution_count": 12,
-     "metadata": {},
-     "output_type": "execute_result"
-    }
-   ],
-   "source": [
-    "df.values[0:10] # Το που στο λεξικο το εχει ως noun (γραμμή 165)"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 13,
-   "metadata": {},
-   "outputs": [
-    {
-     "data": {
-      "text/plain": [
-       "206"
-      ]
-     },
-     "execution_count": 13,
-     "metadata": {},
-     "output_type": "execute_result"
-    }
-   ],
-   "source": [
-    "len(df)"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 14,
-   "metadata": {},
-   "outputs": [
-    {
-     "data": {
-      "text/plain": [
-       "['παιχ', 'νί', 'δι']"
-      ]
-     },
-     "execution_count": 14,
-     "metadata": {},
-     "output_type": "execute_result"
-    }
-   ],
-   "source": [
-    "syllabify('παιχνίδι')"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 15,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "# Here we indicate the syllable count for our pseudowords.\n",
-    "number_of_syllables = 3"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 16,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "# Generate a dictionary where the keys correspond to the syllable count i.e. number_of_syllables, \n",
-    "#and the values represent the distinct first, second, third syllables, and so on.\n",
-    "syldict = dict()\n",
-    "for n in range(number_of_syllables):\n",
-    "    syldict[n+1] = list()\n",
-    "\n",
-    "for wrd in df.values:    \n",
-    "    if type(wrd) == str:\n",
-    "        q = remove_oxia(wrd)\n",
-    "        sl = syllabify(q)\n",
-    "        # print(sl)\n",
-    "        if len(sl) == number_of_syllables:\n",
-    "            #if sl[2]=='σκετ': print(sl)\n",
-    "            for n in range(number_of_syllables):\n",
-    "                syldict[n+1].append(sl[n])\n",
-    "\n",
-    "# Get unique\n",
-    "for k,v in syldict.items():\n",
-    "    syldict[k] = np.unique(v)"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 17,
-   "metadata": {},
-   "outputs": [
-    {
-     "data": {
-      "text/plain": [
-       "{1: array(['α', 'αι', 'αλ', 'αν', 'αυ', 'βι', 'βου', 'γε', 'γυ', 'δευ', 'δη',\n",
-       "        'δου', 'δυ', 'ε', 'εγ', 'ει', 'εκ', 'εν', 'ευ', 'ζη', 'η', 'θε',\n",
-       "        'κα', 'κει', 'κι', 'κομ', 'κυ', 'λο', 'με', 'μει', 'μου', 'ο',\n",
-       "        'ου', 'πα', 'παι', 'παιχ', 'πλαι', 'πο', 'προ', 'ρυθ', 'ση', 'στα',\n",
-       "        'στοι', 'συ', 'σχε', 'ται', 'τε', 'τρα', 'υ'], dtype='<U4'),\n",
-       " 2: array(['α', 'βλη', 'βλι', 'γι', 'γο', 'γρα', 'γραμ', 'δει', 'δι', 'δο',\n",
-       "        'ε', 'θε', 'θου', 'θρω', 'θυ', 'κο', 'λα', 'λε', 'λει', 'λευ',\n",
-       "        'λω', 'μα', 'με', 'μει', 'μι', 'να', 'ναι', 'νη', 'νι', 'νο',\n",
-       "        'νοι', 'νω', 'ξη', 'ξι', 'πε', 'πο', 'πουρ', 'ρει', 'ρελ', 'ρευ',\n",
-       "        'ρι', 'ριθ', 'σι', 'σο', 'στε', 'στη', 'σω', 'τα', 'ταρ', 'τε',\n",
-       "        'τη', 'χει', 'ω'], dtype='<U4'),\n",
-       " 3: array(['α', 'γη', 'γκη', 'γος', 'δα', 'δι', 'δρος', 'ζα', 'θον', 'κα',\n",
-       "        'κη', 'λο', 'μα', 'μη', 'μος', 'να', 'νη', 'νο', 'νος', 'ο', 'ος',\n",
-       "        'πο', 'πος', 'ρα', 'σα', 'ση', 'στο', 'στως', 'τη', 'της', 'τος',\n",
-       "        'τρο', 'φο', 'χη', 'ψη'], dtype='<U4')}"
-      ]
-     },
-     "execution_count": 17,
-     "metadata": {},
-     "output_type": "execute_result"
-    }
-   ],
-   "source": [
-    "syldict"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 18,
-   "metadata": {},
-   "outputs": [
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "49\n",
-      "53\n",
-      "35\n"
-     ]
-    }
-   ],
-   "source": [
-    "for k in syldict.keys(): \n",
-    "    print(len(syldict[k]))"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 19,
-   "metadata": {},
-   "outputs": [
-    {
-     "data": {
-      "text/plain": [
-       "array(['α', 'γη', 'γκη', 'γος', 'δα', 'δι', 'δρος', 'ζα', 'θον', 'κα',\n",
-       "       'κη', 'λο', 'μα', 'μη', 'μος', 'να', 'νη', 'νο', 'νος', 'ο', 'ος',\n",
-       "       'πο', 'πος', 'ρα', 'σα', 'ση', 'στο', 'στως', 'τη', 'της', 'τος',\n",
-       "       'τρο', 'φο', 'χη', 'ψη'], dtype='<U4')"
-      ]
-     },
-     "execution_count": 19,
-     "metadata": {},
-     "output_type": "execute_result"
-    }
-   ],
-   "source": [
-    "# Display unique suffixes\n",
-    "syldict[number_of_syllables]"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 20,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "# iterator of all possible pseudowords. Do not use list(combinations_gen), it will cause a memory error\n",
-    "iterlist = [list(v) for v in syldict.values()]\n",
-    "combinations_gen = itertools.product(*iterlist)"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 21,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "# list(itertools.islice(combinations_gen, 10))"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 22,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "def join_tuple(strings):\n",
-    "  joined = \"\"\n",
-    "  for string in strings:\n",
-    "    joined += string  \n",
-    "  return joined"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 23,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "def max_consecutively_repeated_letters(string):\n",
-    "    max_count = 0\n",
-    "    current_count = 0\n",
-    "    previous_letter = None\n",
-    "\n",
-    "    for letter in string:\n",
-    "        if letter.isalpha():\n",
-    "            letter = letter.lower()\n",
-    "            if letter == previous_letter:\n",
-    "                current_count += 1\n",
-    "            else:\n",
-    "                current_count = 1\n",
-    "                previous_letter = letter\n",
-    "\n",
-    "            if current_count > max_count:\n",
-    "                max_count = current_count\n",
-    "\n",
-    "    return max_count"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 24,
-   "metadata": {},
-   "outputs": [
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "4\n"
-     ]
-    }
-   ],
-   "source": [
-    "# Example usage\n",
-    "input_string = \"Helloooo, World!\"\n",
-    "max_count = max_consecutively_repeated_letters(input_string)\n",
-    "print(max_count)"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 25,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "def calculate_similarity(string1, string2):\n",
-    "    levenshtein_distance = jellyfish.levenshtein_distance(string1, string2)\n",
-    "    similarity_ratio = 1 - (levenshtein_distance / max(len(string1), len(string2)))\n",
-    "    return similarity_ratio"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 26,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "def generate_ngrams(text):\n",
-    "    ngrams_2 = [text[i:i+2] for i in range(len(text)-1)]\n",
-    "    ngrams_3 = [text[i:i+3] for i in range(len(text)-2)]\n",
-    "    return ngrams_2, ngrams_3"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 27,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "def search_ngrams_in_lexicon(lex, ngrams_2, ngrams_3):\n",
-    "    for ngram in ngrams_2 + ngrams_3:\n",
-    "        found = False\n",
-    "        for word in lex:\n",
-    "            if ngram in word:\n",
-    "                found = True\n",
-    "                break\n",
-    "        if not found:\n",
-    "            return False\n",
-    "    return True"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 28,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "def phonetic_string(input_string):\n",
-    "    substitutions = {\n",
-    "        \"αι\": \"ε\",\n",
-    "        \"ει\": \"ι\",\n",
-    "        \"οι\": \"ι\",\n",
-    "        \"υι\": \"ι\",\n",
-    "        \"ω\": \"ο\",\n",
-    "        \"η\": \"ι\",\n",
-    "        \"υ\": \"ι\"\n",
-    "    }\n",
-    "\n",
-    "    output_string = input_string\n",
-    "\n",
-    "    for pattern, replacement in substitutions.items():\n",
-    "        output_string = output_string.replace(pattern, replacement)\n",
-    "\n",
-    "    return output_string"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 29,
-   "metadata": {},
-   "outputs": [
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "ετια\n"
-     ]
-    }
-   ],
-   "source": [
-    "input_str = \"αιτια\"\n",
-    "output_str = phonetic_string(input_str)\n",
-    "print(output_str)  "
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 30,
-   "metadata": {},
-   "outputs": [
-    {
-     "data": {
-      "text/plain": [
-       "(0.5714285714285714, 0.7142857142857143)"
-      ]
-     },
-     "execution_count": 30,
-     "metadata": {},
-     "output_type": "execute_result"
-    }
-   ],
-   "source": [
-    "string1 = \"δηποδα\"\n",
-    "string2 = \"διποδος\"\n",
-    "calculate_similarity(string1, string2) , calculate_similarity(phonetic_string(string1), phonetic_string(string2))"
-   ]
-  },
-  {
-   "cell_type": "markdown",
-   "metadata": {},
-   "source": [
-    "### Create combined lexicon"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 31,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "# Concatenate the word arrays from the 2 \n",
-    "concatenated_array = np.concatenate((df1.Word.values, combined_df.spel.values))\n",
-    "\n",
-    "# Create a set from the concatenated array\n",
-    "lex = set(concatenated_array)"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 32,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "def accept_reject_tests(string1, simthreshold=0.5):\n",
-    "    # Test 1\n",
-    "    if string1 in lex:\n",
-    "        return False\n",
-    "    # Test 2\n",
-    "    if max_consecutively_repeated_letters(string1) > 1:\n",
-    "        return False\n",
-    "    # Test 3 ... Check similarity and phonetic_similarity (Note 'αλεδα' is rejected for simthreshold 0.5 but not for 0.8)\n",
-    "    for string2 in lex:\n",
-    "        similarity_ratio = calculate_similarity(string1, string2)\n",
-    "        phonetic_similarity_ratio = calculate_similarity(phonetic_string(string1), phonetic_string(string2))\n",
-    "        check_ratio = max(similarity_ratio, phonetic_similarity_ratio)\n",
-    "        if check_ratio > simthreshold:\n",
-    "            return False  \n",
-    "    # Test 4\n",
-    "    # If any 2,3 -n gram is not in the lexicon the pseudoword \n",
-    "    # contains a strange combination e.g 'λψχ' and should be rejected\n",
-    "    ngrams_2, ngrams_3 = generate_ngrams(string1)\n",
-    "    test = search_ngrams_in_lexicon(lex, ngrams_2, ngrams_3)\n",
-    "    if not test:\n",
-    "        return False\n",
-    "\n",
-    "    return True"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 33,
-   "metadata": {},
-   "outputs": [
-    {
-     "data": {
-      "text/plain": [
-       "False"
-      ]
-     },
-     "execution_count": 33,
-     "metadata": {},
-     "output_type": "execute_result"
-    }
-   ],
-   "source": [
-    "accept_reject_tests('αβαβφλη')"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 34,
-   "metadata": {},
-   "outputs": [
-    {
-     "data": {
-      "text/plain": [
-       "False"
-      ]
-     },
-     "execution_count": 34,
-     "metadata": {},
-     "output_type": "execute_result"
-    }
-   ],
-   "source": [
-    "accept_reject_tests('αλεδα')"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 36,
-   "metadata": {},
-   "outputs": [
-    {
-     "data": {
-      "text/plain": [
-       "(False, True)"
-      ]
-     },
-     "execution_count": 36,
-     "metadata": {},
-     "output_type": "execute_result"
-    }
-   ],
-   "source": [
-    "accept_reject_tests('υχειμη', 0.6), accept_reject_tests('υχειμη', 0.8)"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 37,
-   "metadata": {},
-   "outputs": [
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "αβληγη\n",
-      "αβληγκη\n",
-      "αβληγος\n",
-      "αβληδα\n",
-      "αβληδι\n",
-      "αβληδρος\n",
-      "αβληζα\n",
-      "αβλημη\n",
-      "αβλημος\n",
-      "αβληνος\n",
-      "αβληπο\n",
-      "αβληρα\n",
-      "αβλησα\n",
-      "αβλητρο\n",
-      "αβληφο\n",
-      "αβληχη\n",
-      "αβλιγη\n",
-      "αβλιγκη\n",
-      "αβλιγος\n",
-      "αβλιδα\n",
-      "αβλιδι\n",
-      "αβλιδρος\n",
-      "αβλιζα\n",
-      "αβλιμη\n",
-      "αβλιμος\n",
-      "αβλινος\n",
-      "αβλιο\n",
-      "αβλιπο\n",
-      "αβλιρα\n",
-      "αβλισα\n",
-      "αβλιτρο\n",
-      "αβλιφο\n",
-      "αβλιχη\n",
-      "αγιγη\n",
-      "αγιγκη\n",
-      "αγιτρο\n",
-      "αγιχη\n",
-      "αγοα\n",
-      "αγοκα\n",
-      "αγοκη\n",
-      "αγολο\n",
-      "αγομη\n",
-      "αγοπο\n",
-      "αγοφο\n",
-      "αγοχη\n",
-      "αγοψη\n",
-      "αγραδρος\n",
-      "αγρατρο\n",
-      "αγραμδα\n",
-      "αγραμνα\n",
-      "αγραμνη\n",
-      "αγραμνο\n",
-      "αγραμνος\n",
-      "αγραμπο\n",
-      "αγραμπος\n",
-      "αγραμψη\n",
-      "αδειγη\n",
-      "αδειμη\n",
-      "αδειχη\n",
-      "αδειψη\n",
-      "αδιγη\n",
-      "αδιδα\n",
-      "αδιδι\n",
-      "αδιμη\n",
-      "αδιπο\n",
-      "αδιφο\n",
-      "αδιχη\n",
-      "αδιψη\n",
-      "αδοα\n",
-      "αδογη\n",
-      "αδογκη\n",
-      "αδοδα\n",
-      "αδοδι\n",
-      "αδοκα\n",
-      "αδοκη\n",
-      "αδομη\n",
-      "αδοπο\n",
-      "αδορα\n",
-      "αδοτη\n",
-      "αδοφο\n",
-      "αδοχη\n",
-      "αδοψη\n",
-      "αεγη\n",
-      "αεγκη\n",
-      "αεδα\n",
-      "αεδι\n",
-      "αεκα\n",
-      "αεκη\n",
-      "αεμα\n",
-      "αεμη\n",
-      "αενα\n",
-      "αενη\n",
-      "αενο\n",
-      "αεπο\n",
-      "αεπος\n",
-      "αεσα\n",
-      "αεση\n",
-      "αεφο\n",
-      "αεχη\n",
-      "αθεα\n",
-      "αθεγη\n",
-      "αθεγκη\n",
-      "αθεδα\n",
-      "αθεδι\n",
-      "αθεδρος\n",
-      "αθεκα\n",
-      "αθεκη\n",
-      "αθεμη\n",
-      "αθεπο\n",
-      "αθεσα\n",
-      "αθεση\n",
-      "αθουα\n",
-      "αθουγη\n",
-      "αθουγκη\n",
-      "αθουγος\n",
-      "αθουδα\n",
-      "αθουδι\n",
-      "αθουδρος\n",
-      "αθουζα\n",
-      "αθουθον\n",
-      "αθουμος\n",
-      "αθουνα\n",
-      "αθουνος\n",
-      "αθουο\n",
-      "αθουπο\n",
-      "αθουπος\n",
-      "αθουτρο\n",
-      "αθουφο\n",
-      "αθρωλο\n",
-      "αθυα\n",
-      "αθυγη\n",
-      "αθυγκη\n",
-      "αθυδα\n",
-      "αθυδι\n",
-      "αθυλο\n",
-      "αθυο\n",
-      "αθυπο\n",
-      "αθυτρο\n",
-      "αθυφο\n",
-      "αθυχη\n",
-      "ακοα\n",
-      "ακογη\n",
-      "ακογκη\n",
-      "ακοδα\n",
-      "ακοδι\n",
-      "ακοδρος\n",
-      "ακοζα\n",
-      "ακοκα\n",
-      "ακοκη\n",
-      "ακολο\n",
-      "ακονο\n",
-      "ακορα\n",
-      "ακοτη\n",
-      "ακοφο\n",
-      "ακοχη\n",
-      "αλαο\n",
-      "αλαπο\n",
-      "αλαχη\n",
-      "αλαψη\n",
-      "αλεγη\n",
-      "αλεγκη\n",
-      "αλεδα\n",
-      "αλεδι\n",
-      "αλεζα\n",
-      "αλεκα\n",
-      "αλεκη\n",
-      "αλελο\n",
-      "αλενη\n",
-      "αλενο\n",
-      "αλεο\n",
-      "αλεφο\n",
-      "αλεχη\n",
-      "αλειγη\n",
-      "αλειλο\n",
-      "αλειμη\n",
-      "αλειο\n",
-      "αλειχη\n",
-      "αλευγκη\n",
-      "αλευγος\n",
-      "αλευδρος\n",
-      "αλωδα\n",
-      "αλωλο\n",
-      "αλωμη\n",
-      "αλωπο\n",
-      "αλωρα\n",
-      "αλωτη\n",
-      "αλωχη\n",
-      "αμαγη\n",
-      "αμαδι\n",
-      "αμαζα\n",
-      "αμαλο\n",
-      "αμαμα\n",
-      "αμαμη\n",
-      "αμανα\n",
-      "αμανο\n",
-      "αμαο\n",
-      "αμαπο\n",
-      "αμασα\n",
-      "αματη\n",
-      "αμαφο\n",
-      "αμεα\n",
-      "αμεγκη\n",
-      "αμεδα\n",
-      "αμεδι\n",
-      "αμεζα\n",
-      "αμεκα\n",
-      "αμεκη\n",
-      "αμεμα\n",
-      "αμεμη\n",
-      "αμεο\n",
-      "αμεφο\n",
-      "αμεχη\n",
-      "αμεψη\n",
-      "αμειζα\n",
-      "αμεικα\n",
-      "αμειμα\n",
-      "αμειμη\n",
-      "αμειπο\n",
-      "αμειφο\n",
-      "αμια\n",
-      "αμιζα\n",
-      "αμικα\n",
-      "αμικη\n",
-      "αμιμα\n",
-      "αμιμη\n",
-      "αμιο\n",
-      "αμιπο\n",
-      "αμιφο\n",
-      "αναζα\n",
-      "αναμη\n",
-      "ανανη\n",
-      "ανανο\n",
-      "αναο\n",
-      "αναπος\n",
-      "αναση\n",
-      "αναφο\n",
-      "αναιζα\n",
-      "αναιλο\n",
-      "αναιπο\n",
-      "αναιφο\n",
-      "ανημη\n",
-      "ανηο\n",
-      "ανηφο\n",
-      "ανιμη\n",
-      "ανιο\n",
-      "ανιφο\n",
-      "ανοα\n",
-      "ανοδα\n",
-      "ανοζα\n",
-      "ανοκα\n",
-      "ανοκη\n",
-      "ανολο\n",
-      "ανοπο\n",
-      "ανοφο\n",
-      "ανοψη\n",
-      "ανοιφο\n",
-      "ανωδα\n",
-      "ανωλο\n",
-      "ανωπο\n",
-      "ανωφο\n",
-      "αξηγη\n",
-      "αξηδα\n",
-      "αξηλο\n",
-      "αξηπο\n",
-      "αξηρα\n",
-      "αξητη\n",
-      "αξητρο\n",
-      "αξηφο\n",
-      "αξηχη\n",
-      "αξηψη\n",
-      "αξιγη\n",
-      "αξιδα\n",
-      "αξιλο\n",
-      "αξιπο\n",
-      "αξιρα\n",
-      "αξιτη\n",
-      "αξιτρο\n",
-      "αξιφο\n",
-      "αξιχη\n",
-      "απεα\n",
-      "απεγκη\n",
-      "απεδι\n",
-      "απεζα\n",
-      "απεμα\n",
-      "απεμη\n",
-      "απενα\n",
-      "απενη\n",
-      "απενο\n",
-      "απεο\n",
-      "απεος\n",
-      "απεψη\n",
-      "αποα\n",
-      "αποδα\n",
-      "αποδι\n",
-      "αποζα\n",
-      "απομη\n",
-      "αποφο\n",
-      "απουργκη\n",
-      "απουρδι\n",
-      "απουρδρος\n",
-      "απουρζα\n",
-      "απουρθον\n",
-      "απουρκα\n",
-      "απουρκη\n",
-      "απουρλο\n",
-      "απουρμη\n",
-      "απουρμος\n",
-      "απουρνα\n",
-      "απουρνη\n",
-      "απουρνος\n",
-      "απουρπο\n",
-      "απουρπος\n",
-      "απουρστο\n",
-      "απουρστως\n",
-      "απουρτη\n",
-      "απουρτης\n",
-      "απουρτος\n",
-      "απουρτρο\n",
-      "απουρφο\n",
-      "αρειγκη\n",
-      "αρειψη\n",
-      "αρελγκη\n",
-      "αρελγος\n",
-      "αρελκα\n",
-      "αρελμη\n",
-      "αρελμος\n",
-      "αρελνος\n",
-      "αρελο\n",
-      "αρελπο\n",
-      "αρελπος\n",
-      "αρελτρο\n",
-      "αρελχη\n",
-      "αρευγκη\n",
-      "αρευδρος\n",
-      "αρευθον\n",
-      "αρευμη\n",
-      "αρευμος\n",
-      "αρευνος\n",
-      "αρευπο\n",
-      "αρευπος\n",
-      "αρευτρο\n",
-      "αρευφο\n",
-      "αρευψη\n",
-      "αριγκη\n",
-      "αριπο\n",
-      "αριφο\n",
-      "αριψη\n",
-      "αριθα\n",
-      "ασια\n",
-      "ασιγη\n",
-      "ασιζα\n",
-      "ασινη\n",
-      "ασινο\n",
-      "ασιο\n",
-      "ασιπο\n",
-      "ασιρα\n",
-      "ασιφο\n",
-      "ασιχη\n",
-      "ασοα\n",
-      "ασογη\n",
-      "ασογκη\n",
-      "ασοδα\n",
-      "ασοδρος\n",
-      "ασοζα\n",
-      "ασοκα\n",
-      "ασοκη\n",
-      "ασολο\n",
-      "ασομα\n",
-      "ασομη\n",
-      "ασονο\n",
-      "ασορα\n",
-      "ασοση\n",
-      "ασοψη\n",
-      "αστετρο\n",
-      "αστηδρος\n",
-      "αστητρο\n",
-      "ασωα\n",
-      "ασωγη\n",
-      "ασωδα\n",
-      "ασωζα\n",
-      "ασωκα\n",
-      "ασωλο\n",
-      "ασωμα\n",
-      "ασωμη\n",
-      "ασωνο\n",
-      "ασωο\n",
-      "ασωρα\n",
-      "ασωση\n",
-      "ασωψη\n",
-      "αταγη\n",
-      "αταδα\n",
-      "αταδι\n",
-      "αταδρος\n",
-      "αταζα\n",
-      "αταμη\n",
-      "ατανο\n",
-      "αταο\n",
-      "ατασα\n",
-      "αταση\n",
-      "ατατρο\n",
-      "αταψη\n",
-      "αταργκη\n",
-      "αταργος\n",
-      "αταρδρος\n",
-      "αταρζα\n",
-      "αταρθον\n",
-      "αταρλο\n",
-      "αταρμη\n",
-      "αταρνα\n",
-      "αταρνη\n",
-      "αταρνο\n",
-      "αταρνος\n",
-      "αταρο\n",
-      "αταρσα\n",
-      "αταρστο\n",
-      "αταρστως\n",
-      "αταρτρο\n",
-      "ατεα\n",
-      "ατεδα\n",
-      "ατεδι\n",
-      "ατεδρος\n",
-      "ατεζα\n",
-      "ατεμη\n",
-      "ατεο\n",
-      "ατεπο\n",
-      "ατεσα\n",
-      "ατεση\n",
-      "ατεφο\n",
-      "ατεψη\n",
-      "ατηγη\n",
-      "ατηγκη\n",
-      "ατηζα\n",
-      "ατηφο\n",
-      "αχειγκη\n",
-      "αχειπο\n",
-      "αχειφο\n",
-      "αχειχη\n",
-      "αχειψη\n",
-      "αωδα\n",
-      "αωδι\n",
-      "αωνα\n",
-      "αωνη\n",
-      "αωνο\n",
-      "αωτη\n",
-      "αιαγη\n",
-      "αιαγος\n",
-      "αιαδι\n",
-      "αιαζα\n",
-      "αιαμα\n",
-      "αιαμη\n",
-      "αιανη\n",
-      "αιανο\n",
-      "αιαο\n",
-      "αιαος\n",
-      "αιαπο\n",
-      "αιαπος\n",
-      "αιασα\n",
-      "αιαση\n",
-      "αιαφο\n",
-      "αιαχη\n",
-      "αιαψη\n",
-      "αιβληγκη\n",
-      "αιβληγος\n",
-      "αιβληδα\n",
-      "αιβληδρος\n",
-      "αιβληθον\n",
-      "αιβληλο\n",
-      "αιβλημος\n",
-      "αιβληνο\n",
-      "αιβληνος\n",
-      "αιβληρα\n",
-      "αιβληστο\n",
-      "αιβληστως\n",
-      "αιβλητης\n",
-      "αιβληφο\n",
-      "αιβλιγκη\n",
-      "αιβλιγος\n",
-      "αιβλιδα\n",
-      "αιβλιδρος\n",
-      "αιβλιθον\n",
-      "αιβλιλο\n",
-      "αιβλιμος\n",
-      "αιβλινο\n",
-      "αιβλινος\n",
-      "αιβλιος\n",
-      "αιβλιρα\n",
-      "αιβλιστο\n",
-      "αιβλιστως\n",
-      "αιβλιτης\n",
-      "αιβλιφο\n",
-      "αιγιγη\n",
-      "αιγιγκη\n",
-      "αιγιγος\n",
-      "αιγικη\n",
-      "αιγιμη\n",
-      "αιγινο\n",
-      "αιγιτη\n",
-      "αιγιχη\n",
-      "αιγοα\n",
-      "αιγογη\n",
-      "αιγογκη\n",
-      "αιγοδρος\n",
-      "αιγοθον\n",
-      "αιγοκα\n",
-      "αιγοκη\n",
-      "αιγολο\n",
-      "αιγομα\n",
-      "αιγομη\n",
-      "αιγοπο\n",
-      "αιγοπος\n",
-      "αιγοσα\n",
-      "αιγοση\n",
-      "αιγοστως\n",
-      "αιγοτη\n",
-      "αιγοτρο\n",
-      "αιγοφο\n",
-      "αιγοχη\n",
-      "αιγοψη\n",
-      "αιγραγκη\n",
-      "αιγραγος\n",
-      "αιγραδρος\n",
-      "αιγραθον\n",
-      "αιγραο\n",
-      "αιγραος\n",
-      "αιγραπο\n",
-      "αιγραπος\n",
-      "αιγραστο\n",
-      "αιγραστως\n",
-      "αιγρατος\n",
-      "αιγρατρο\n",
-      "αιγραμδα\n",
-      "αιγραμνα\n",
-      "αιγραμνη\n",
-      "αιγραμνο\n",
-      "αιγραμνος\n",
-      "αιγραμπο\n",
-      "αιγραμπος\n",
-      "αιγραμφο\n",
-      "αιγραμψη\n",
-      "αιδειγη\n",
-      "αιδειγκη\n",
-      "αιδειζα\n",
-      "αιδειπο\n",
-      "αιδειπος\n",
-      "αιδεισα\n",
-      "αιδειστως\n",
-      "αιδειτη\n",
-      "αιδειφο\n",
-      "αιδειχη\n",
-      "αιδειψη\n",
-      "αιδιγη\n",
-      "αιδιγκη\n",
-      "αιδιζα\n",
-      "αιδιπο\n",
-      "αιδιπος\n",
-      "αιδισα\n",
-      "αιδιστως\n",
-      "αιδιτη\n",
-      "αιδιφο\n",
-      "αιδιχη\n",
-      "αιδιψη\n",
-      "αιδοα\n",
-      "αιδογη\n",
-      "αιδογκη\n",
-      "αιδογος\n",
-      "αιδοδι\n",
-      "αιδοδρος\n",
-      "αιδοκα\n",
-      "αιδοκη\n",
-      "αιδονη\n",
-      "αιδοπος\n",
-      "αιδοστο\n",
-      "αιδοστως\n",
-      "αιδοτρο\n",
-      "αιδοψη\n",
-      "αιεα\n",
-      "αιεγη\n",
-      "αιεγκη\n",
-      "αιεγος\n",
-      "αιεδα\n",
-      "αιεδι\n",
-      "αιεζα\n",
-      "αιεθον\n",
-      "αιεκα\n",
-      "αιεκη\n",
-      "αιελο\n",
-      "αιεμα\n",
-      "αιεμη\n",
-      "αιενα\n",
-      "αιενη\n",
-      "αιενο\n",
-      "αιεπο\n",
-      "αιεπος\n",
-      "αιεσα\n",
-      "αιεφο\n",
-      "αιεχη\n",
-      "αιεψη\n",
-      "αιθεγη\n",
-      "αιθεγκη\n",
-      "αιθεδι\n",
-      "αιθεκη\n",
-      "αιθελο\n",
-      "αιθεμη\n",
-      "αιθεο\n",
-      "αιθεπο\n",
-      "αιθεστο\n",
-      "αιθεστως\n",
-      "αιθετρο\n",
-      "αιθεψη\n",
-      "αιθουγκη\n",
-      "αιθουγος\n",
-      "αιθουδι\n",
-      "αιθουδρος\n",
-      "αιθουλο\n",
-      "αιθουμη\n",
-      "αιθουμος\n",
-      "αιθουνη\n",
-      "αιθουνο\n",
-      "αιθουνος\n",
-      "αιθουο\n",
-      "αιθουπο\n",
-      "αιθουπος\n",
-      "αιθουστο\n",
-      "αιθουστως\n",
-      "αιθουτρο\n",
-      "αιθουφο\n",
-      "αιθουχη\n",
-      "αιθρωγη\n",
-      "αιθρωγος\n",
-      "αιθρωδα\n",
-      "αιθρωδι\n",
-      "αιθρωζα\n",
-      "αιθρωθον\n",
-      "αιθρωκα\n",
-      "αιθρωλο\n",
-      "αιθρωμα\n",
-      "αιθρωμη\n",
-      "αιθρωμος\n",
-      "αιθρωνα\n",
-      "αιθρωρα\n",
-      "αιθρωτρο\n",
-      "αιθρωχη\n",
-      "αιθρωψη\n",
-      "αιθυα\n",
-      "αιθυγος\n",
-      "αιθυδα\n",
-      "αιθυδι\n",
-      "αιθυνο\n",
-      "αιθυο\n",
-      "αιθυπο\n",
-      "αιθυπος\n",
-      "αιθυφο\n",
-      "αιθυχη\n",
-      "αικοα\n",
-      "αικογκη\n",
-      "αικογος\n",
-      "αικοδα\n",
-      "αικοδρος\n",
-      "αικοζα\n",
-      "αικοθον\n",
-      "αικοκα\n",
-      "αικοκη\n",
-      "αικοτρο\n",
-      "αικοφο\n",
-      "αιλαγκη\n",
-      "αιλαμη\n",
-      "αιλαο\n",
-      "αιλαπο\n",
-      "αιλεδα\n",
-      "αιλεζα\n",
-      "αιλελο\n",
-      "αιλεμη\n",
-      "αιλεπο\n",
-      "αιλεστο\n",
-      "αιλεστως\n",
-      "αιλεφο\n",
-      "αιλεψη\n",
-      "αιλειδι\n",
-      "αιλειλο\n",
-      "αιλειο\n",
-      "αιλειφο\n",
-      "αιλευγκη\n",
-      "αιλευδρος\n",
-      "αιλωδα\n",
-      "αιλωλο\n",
-      "αιλωμη\n",
-      "αιλωπο\n",
-      "αιλωπος\n",
-      "αιλωτη\n",
-      "αιλωχη\n",
-      "αιμαγκη\n",
-      "αιμαδι\n",
-      "αιμαδρος\n",
-      "αιμακη\n",
-      "αιμαλο\n",
-      "αιμανο\n",
-      "αιμαο\n",
-      "αιμαπο\n",
-      "αιμαφο\n",
-      "αιμεα\n",
-      "αιμεγη\n",
-      "αιμεγκη\n",
-      "αιμεδι\n",
-      "αιμεζα\n",
-      "αιμεκα\n",
-      "αιμεκη\n",
-      "αιμελο\n",
-      "αιμεμη\n",
-      "αιμεο\n",
-      "αιμεφο\n",
-      "αιμεχη\n",
-      "αιμεψη\n",
-      "αιμεια\n",
-      "αιμειγη\n",
-      "αιμειγκη\n",
-      "αιμειδι\n",
-      "αιμεικα\n",
-      "αιμεικη\n",
-      "αιμειλο\n",
-      "αιμειμα\n",
-      "αιμειμη\n",
-      "αιμειο\n",
-      "αιμειπο\n",
-      "αιμειφο\n",
-      "αιμειψη\n",
-      "αιμιγκη\n",
-      "αιμιδι\n",
-      "αιμικα\n",
-      "αιμιλο\n",
-      "αιμιμα\n",
-      "αιμιμη\n",
-      "αιμιο\n",
-      "αιμιπο\n",
-      "αιμιφο\n",
-      "αιμιψη\n",
-      "αιναδι\n",
-      "αιναμη\n",
-      "αινανο\n",
-      "αιναο\n",
-      "αιναπο\n",
-      "αιναρα\n",
-      "αιναφο\n",
-      "αιναχη\n",
-      "αιναψη\n",
-      "αιναια\n",
-      "αιναιγκη\n",
-      "αιναιδι\n",
-      "αιναιζα\n",
-      "αιναιθον\n",
-      "αιναικη\n",
-      "αιναιλο\n",
-      "αιναιμη\n",
-      "αιναινα\n",
-      "αιναινο\n",
-      "αιναιπο\n",
-      "αιναιστο\n",
-      "αιναιστως\n",
-      "αιναιτρο\n",
-      "αιναιφο\n",
-      "αινηγη\n",
-      "αινηλο\n",
-      "αινηο\n",
-      "αινηστως\n",
-      "αινηφο\n",
-      "αινηψη\n",
-      "αινιγη\n",
-      "αινιζα\n",
-      "αινιλο\n",
-      "αινιστως\n",
-      "αινιτη\n",
-      "αινιφο\n",
-      "αινιψη\n",
-      "αινοα\n",
-      "αινογη\n",
-      "αινοδα\n",
-      "αινοζα\n",
-      "αινοφο\n",
-      "αινοιγη\n",
-      "αινοιζα\n",
-      "αινοιλο\n",
-      "αινοιστως\n",
-      "αινοιτη\n",
-      "αινοιφο\n",
-      "αινωγη\n",
-      "αινωδα\n",
-      "αινωδι\n",
-      "αινωφο\n",
-      "αιξηδα\n",
-      "αιξηδι\n",
-      "αιξηθον\n",
-      "αιξηκη\n",
-      "αιξηλο\n",
-      "αιξητη\n",
-      "αιξηφο\n",
-      "αιξηψη\n",
-      "αιξια\n",
-      "αιξιδι\n",
-      "αιξιθον\n",
-      "αιξικη\n",
-      "αιξιλο\n",
-      "αιξιο\n",
-      "αιξιτη\n",
-      "αιξιφο\n",
-      "αιπεα\n",
-      "αιπεγη\n",
-      "αιπεγκη\n",
-      "αιπεκη\n",
-      "αιπεμα\n",
-      "αιπεο\n",
-      "αιπεπο\n",
-      "αιπεστως\n",
-      "αιπεφο\n",
-      "αιπεψη\n",
-      "αιποα\n",
-      "αιπογη\n",
-      "αιπογκη\n",
-      "αιποζα\n",
-      "αιποκα\n",
-      "αιποκη\n",
-      "αιπομα\n",
-      "αιπομη\n",
-      "αιποπο\n",
-      "αιποσα\n",
-      "αιποστως\n",
-      "αιποτρο\n",
-      "αιποφο\n",
-      "αιπουργκη\n",
-      "αιπουρδι\n",
-      "αιπουρδρος\n",
-      "αιπουρζα\n",
-      "αιπουρθον\n",
-      "αιπουρκα\n",
-      "αιπουρκη\n",
-      "αιπουρλο\n",
-      "αιπουρμη\n",
-      "αιπουρμος\n",
-      "αιπουρνα\n",
-      "αιπουρνη\n",
-      "αιπουρνος\n",
-      "αιπουρπο\n",
-      "αιπουρπος\n",
-      "αιπουρσα\n",
-      "αιπουρση\n",
-      "αιπουρστο\n",
-      "αιπουρστως\n",
-      "αιπουρτη\n",
-      "αιπουρτης\n",
-      "αιπουρτος\n",
-      "αιπουρτρο\n",
-      "αιπουρφο\n",
-      "αιρειγη\n",
-      "αιρειδι\n",
-      "αιρειλο\n",
-      "αιρειχη\n",
-      "αιρειψη\n",
-      "αιρελγη\n",
-      "αιρελγκη\n",
-      "αιρελγος\n",
-      "αιρελκα\n",
-      "αιρελκη\n",
-      "αιρελμα\n",
-      "αιρελμη\n",
-      "αιρελμος\n",
-      "αιρελνος\n",
-      "αιρελπο\n",
-      "αιρελπος\n",
-      "αιρελτρο\n",
-      "αιρελφο\n",
-      "αιρελχη\n",
-      "αιρευγη\n",
-      "αιρευγκη\n",
-      "αιρευγος\n",
-      "αιρευδι\n",
-      "αιρευδρος\n",
-      "αιρευπος\n",
-      "αιρευτρο\n",
-      "αιρευχη\n",
-      "αιρευψη\n",
-      "αιριγη\n",
-      "αιριδι\n",
-      "αιριλο\n",
-      "αιριψη\n",
-      "αισιγη\n",
-      "αισιδι\n",
-      "αισιμη\n",
-      "αισοα\n",
-      "αισογη\n",
-      "αισογκη\n",
-      "αισογος\n",
-      "αισοδρος\n",
-      "αισοκα\n",
-      "αισοκη\n",
-      "αισολο\n",
-      "αισομα\n",
-      "αισονη\n",
-      "αισοση\n",
-      "αισοτη\n",
-      "αισοφο\n",
-      "αισοψη\n",
-      "αιστεγκη\n",
-      "αιστεδι\n",
-      "αιστεδρος\n",
-      "αιστεμη\n",
-      "αιστεμος\n",
-      "αιστεο\n",
-      "αιστεπο\n",
-      "αιστεπος\n",
-      "αιστεση\n",
-      "αιστεστο\n",
-      "αιστεστως\n",
-      "αιστετης\n",
-      "αιστετος\n",
-      "αιστετρο\n",
-      "αιστεχη\n",
-      "αιστηγη\n",
-      "αιστηγος\n",
-      "αιστηδι\n",
-      "αιστηδρος\n",
-      "αιστηστως\n",
-      "αιστητρο\n",
-      "αισωα\n",
-      "αισωγη\n",
-      "αισωγος\n",
-      "αισωκα\n",
-      "αισωλο\n",
-      "αισωνη\n",
-      "αισωο\n",
-      "αισωση\n",
-      "αισωφο\n",
-      "αισωψη\n",
-      "αιταγη\n",
-      "αιταδι\n",
-      "αιταδρος\n",
-      "αιταθον\n",
-      "αιταο\n",
-      "αιταπο\n",
-      "αιταπος\n",
-      "αιτατρο\n",
-      "αιταψη\n",
-      "αιταργκη\n",
-      "αιταρδα\n",
-      "αιταρδι\n",
-      "αιταρδρος\n",
-      "αιταρθον\n",
-      "αιταρκα\n",
-      "αιταρλο\n",
-      "αιταρμη\n",
-      "αιταρνα\n",
-      "αιταρνη\n",
-      "αιταρνο\n",
-      "αιταρνος\n",
-      "αιταρπο\n",
-      "αιταρπος\n",
-      "αιταρσα\n",
-      "αιταρστο\n",
-      "αιταρστως\n",
-      "αιταρτρο\n",
-      "αιταρφο\n",
-      "αιτεα\n",
-      "αιτεγκη\n",
-      "αιτεδα\n",
-      "αιτεδι\n",
-      "αιτεζα\n",
-      "αιτεκη\n",
-      "αιτεμη\n",
-      "αιτενο\n",
-      "αιτεο\n",
-      "αιτεπο\n",
-      "αιτεσα\n",
-      "αιτεστο\n",
-      "αιτεφο\n",
-      "αιτεψη\n",
-      "αιτηλο\n",
-      "αιτηφο\n",
-      "αιχειγη\n",
-      "αιχειγκη\n",
-      "αιχειδι\n",
-      "αιχεικα\n",
-      "αιχεικη\n",
-      "αιχειμα\n",
-      "αιχειμη\n",
-      "αιχειπο\n",
-      "αιχειτη\n",
-      "αιχειφο\n",
-      "αιχειχη\n",
-      "αιχειψη\n",
-      "αιωγη\n",
-      "αιωδα\n",
-      "αιωδι\n",
-      "αιωθον\n",
-      "αιωκα\n",
-      "αιωμη\n",
-      "αιωνη\n",
-      "αιωπο\n",
-      "αιωστο\n",
-      "αιωτρο\n",
-      "αιωφο\n",
-      "αιωχη\n",
-      "αλαο\n",
-      "αλαπο\n",
-      "αλαχη\n",
-      "αλαψη\n",
-      "αλγια\n",
-      "αλγιγκη\n",
-      "αλγιδρος\n",
-      "αλγιτρο\n",
-      "αλγοα\n",
-      "αλγογκη\n",
-      "αλγοδα\n",
-      "αλγοδι\n",
-      "αλγοδρος\n",
-      "αλγοθον\n",
-      "αλγοκα\n",
-      "αλγοκη\n",
-      "αλγολο\n",
-      "αλγομα\n",
-      "αλγομη\n",
-      "αλγομος\n",
-      "αλγοπο\n",
-      "αλγοπος\n",
-      "αλγοσα\n",
-      "αλγοστο\n",
-      "αλγοστως\n",
-      "αλγοτη\n",
-      "αλγοτρο\n",
-      "αλγοφο\n",
-      "αλγοχη\n",
-      "αλγοψη\n",
-      "αλδειγη\n",
-      "αλδειγκη\n",
-      "αλδειγος\n",
-      "αλδειδα\n",
-      "αλδειδι\n",
-      "αλδειδρος\n",
-      "αλδειζα\n",
-      "αλδειμα\n",
-      "αλδειμη\n",
-      "αλδεινα\n",
-      "αλδειπο\n",
-      "αλδεισα\n",
-      "αλδειση\n",
-      "αλδειστο\n",
-      "αλδειτρο\n",
-      "αλδειφο\n",
-      "αλδειχη\n",
-      "αλδια\n",
-      "αλδιγη\n",
-      "αλδιγκη\n",
-      "αλδιγος\n",
-      "αλδιδα\n",
-      "αλδιδι\n",
-      "αλδιδρος\n",
-      "αλδιζα\n",
-      "αλδιμα\n",
-      "αλδιμη\n",
-      "αλδινα\n",
-      "αλδιο\n",
-      "αλδιπο\n",
-      "αλδισα\n",
-      "αλδιση\n",
-      "αλδιστο\n",
-      "αλδιτρο\n",
-      "αλδιφο\n",
-      "αλδιχη\n",
-      "αλεγη\n",
-      "αλεγκη\n",
-      "αλεδα\n",
-      "αλεδι\n",
-      "αλεζα\n",
-      "αλεκα\n",
-      "αλεκη\n",
-      "αλελο\n",
-      "αλενη\n",
-      "αλενο\n",
-      "αλεο\n",
-      "αλεφο\n",
-      "αλεχη\n",
-      "αλθεα\n",
-      "αλθεγη\n",
-      "αλθεγκη\n",
-      "αλθεγος\n",
-      "αλθεδα\n",
-      "αλθεδι\n",
-      "αλθεδρος\n",
-      "αλθεκα\n",
-      "αλθεκη\n",
-      "αλθελο\n",
-      "αλθεμα\n",
-      "αλθεμη\n",
-      "αλθεμος\n",
-      "αλθενα\n",
-      "αλθεο\n",
-      "αλθεπο\n",
-      "αλθεπος\n",
-      "αλθεσα\n",
-      "αλθεστο\n",
-      "αλθεστως\n",
-      "αλθετης\n",
-      "αλθετος\n",
-      "αλθετρο\n",
-      "αλθεψη\n",
-      "αλθουα\n",
-      "αλθουγη\n",
-      "αλθουγκη\n",
-      "αλθουγος\n",
-      "αλθουδα\n",
-      "αλθουδι\n",
-      "αλθουδρος\n",
-      "αλθουζα\n",
-      "αλθουθον\n",
-      "αλθουκα\n",
-      "αλθουκη\n",
-      "αλθουλο\n",
-      "αλθουμα\n",
-      "αλθουμη\n",
-      "αλθουμος\n",
-      "αλθουνα\n",
-      "αλθουνη\n",
-      "αλθουνο\n",
-      "αλθουνος\n",
-      "αλθουο\n",
-      "αλθουος\n",
-      "αλθουπο\n",
-      "αλθουπος\n",
-      "αλθουρα\n",
-      "αλθουση\n",
-      "αλθουστο\n",
-      "αλθουτη\n",
-      "αλθουτης\n",
-      "αλθουτος\n",
-      "αλθουτρο\n",
-      "αλθουφο\n",
-      "αλθουχη\n",
-      "αλκοα\n",
-      "αλκογκη\n",
-      "αλκοδα\n",
-      "αλκοδρος\n",
-      "αλκοζα\n",
-      "αλκοθον\n",
-      "αλκοκα\n",
-      "αλκοκη\n",
-      "αλκολο\n",
-      "αλκονος\n",
-      "αλκορα\n",
-      "αλκοσα\n",
-      "αλκοστο\n",
-      "αλκοστως\n",
-      "αλκοτη\n",
-      "αλκοτης\n",
-      "αλκοτρο\n",
-      "αλκοφο\n",
-      "αλκοχη\n",
-      "αλκοψη\n",
-      "αλμαγκη\n",
-      "αλμαδρος\n",
-      "αλμακη\n",
-      "αλμαμη\n",
-      "αλμανο\n",
-      "αλμαο\n",
-      "αλμαπο\n",
-      "αλμαστο\n",
-      "αλματρο\n",
-      "αλμαφο\n",
-      "αλμεα\n",
-      "αλμεγκη\n",
-      "αλμεγος\n",
-      "αλμεδα\n",
-      "αλμεδι\n",
-      "αλμεδρος\n",
-      "αλμεζα\n",
-      "αλμεθον\n",
-      "αλμεκα\n",
-      "αλμεκη\n",
-      "αλμεμα\n",
-      "αλμεμη\n",
-      "αλμεμος\n",
-      "αλμεο\n",
-      "αλμεστο\n",
-      "αλμεστως\n",
-      "αλμετης\n",
-      "αλμεφο\n",
-      "αλμεχη\n",
-      "αλμεψη\n",
-      "αλμειγκη\n",
-      "αλμειστο\n",
-      "αλμιγκη\n",
-      "αλμιστο\n",
-      "αλναγος\n",
-      "αλναδα\n",
-      "αλναδρος\n",
-      "αλναθον\n",
-      "αλνακα\n",
-      "αλναμη\n",
-      "αλναμος\n",
-      "αλνανο\n",
-      "αλνανος\n",
-      "αλναο\n",
-      "αλναπο\n",
-      "αλναπος\n",
-      "αλναρα\n",
-      "αλναση\n",
-      "αλναστο\n",
-      "αλναστως\n",
-      "αλνατης\n",
-      "αλνατρο\n",
-      "αλναφο\n",
-      "αλναχη\n",
-      "αλναια\n",
-      "αλναιγη\n",
-      "αλναιγκη\n",
-      "αλναιγος\n",
-      "αλναιδα\n",
-      "αλναιδρος\n",
-      "αλναιζα\n",
-      "αλναιθον\n",
-      "αλναικα\n",
-      "αλναικη\n",
-      "αλναιλο\n",
-      "αλναιμα\n",
-      "αλναινα\n",
-      "αλναινη\n",
-      "αλναινο\n",
-      "αλναινος\n",
-      "αλναιο\n",
-      "αλναιος\n",
-      "αλναιπο\n",
-      "αλναιπος\n",
-      "αλναιρα\n",
-      "αλναισα\n",
-      "αλναιστο\n",
-      "αλναιστως\n",
-      "αλναιτρο\n",
-      "αλναιφο\n",
-      "αλναιχη\n",
-      "αλνοα\n",
-      "αλνογκη\n",
-      "αλνοδα\n",
-      "αλνοδρος\n",
-      "αλνοζα\n",
-      "αλνοθον\n",
-      "αλνοκα\n",
-      "αλνοκη\n",
-      "αλνολο\n",
-      "αλνονος\n",
-      "αλνοπο\n",
-      "αλνοπος\n",
-      "αλνορα\n",
-      "αλνοσα\n",
-      "αλνοτη\n",
-      "αλνοτης\n",
-      "αλνοτρο\n",
-      "αλνοφο\n",
-      "αλνοψη\n",
-      "αλνοιγκη\n",
-      "αλνοιγος\n",
-      "αλνοιδα\n",
-      "αλνοιδι\n",
-      "αλνοιλο\n",
-      "αλνοιμα\n",
-      "αλνοιμη\n",
-      "αλνοινα\n",
-      "αλνοιο\n",
-      "αλνοιπο\n",
-      "αλνοιτρο\n",
-      "αλνοιφο\n",
-      "αλνοιχη\n",
-      "αλνωδα\n",
-      "αλνωθον\n",
-      "αλνωλο\n",
-      "αλνωνος\n",
-      "αλνωπο\n",
-      "αλνωπος\n",
-      "αλνωρα\n",
-      "αλνωσα\n",
-      "αλνωτη\n",
-      "αλνωτης\n",
-      "αλνωτρο\n",
-      "αλνωφο\n",
-      "αλξηγη\n",
-      "αλξηγκη\n",
-      "αλξηγος\n",
-      "αλξηδα\n",
-      "αλξηδι\n",
-      "αλξηδρος\n",
-      "αλξηλο\n",
-      "αλξημα\n",
-      "αλξημη\n",
-      "αλξηπο\n",
-      "αλξηστο\n",
-      "αλξητρο\n",
-      "αλξηφο\n",
-      "αλξηχη\n",
-      "αλξιγη\n",
-      "αλξιγκη\n",
-      "αλξιγος\n",
-      "αλξιδα\n",
-      "αλξιδι\n",
-      "αλξιδρος\n",
-      "αλξιλο\n",
-      "αλξιμα\n",
-      "αλξιμη\n",
-      "αλξιο\n",
-      "αλξιπο\n",
-      "αλξιστο\n",
-      "αλξιτρο\n",
-      "αλξιφο\n",
-      "αλξιχη\n",
-      "αλπεα\n",
-      "αλπεγη\n",
-      "αλπεγκη\n",
-      "αλπεγος\n",
-      "αλπεδα\n",
-      "αλπεδι\n",
-      "αλπεδρος\n",
-      "αλπεζα\n",
-      "αλπεθον\n",
-      "αλπεμα\n",
-      "αλπεμη\n",
-      "αλπεμος\n",
-      "αλπενα\n",
-      "αλπενη\n",
-      "αλπενο\n",
-      "αλπενος\n",
-      "αλπεο\n",
-      "αλπεος\n",
-      "αλπεπο\n",
-      "αλπεπος\n",
-      "αλπερα\n",
-      "αλπεσα\n",
-      "αλπεστο\n",
-      "αλπεστως\n",
-      "αλπετος\n",
-      "αλπετρο\n",
-      "αλπεφο\n",
-      "αλπεψη\n",
-      "αλποα\n",
-      "αλπογκη\n",
-      "αλποδα\n",
-      "αλποδι\n",
-      "αλποδρος\n",
-      "αλποζα\n",
-      "αλποθον\n",
-      "αλπολο\n",
-      "αλπομα\n",
-      "αλπομη\n",
-      "αλπομος\n",
-      "αλποπο\n",
-      "αλποπος\n",
-      "αλποσα\n",
-      "αλποστο\n",
-      "αλποστως\n",
-      "αλποτρο\n",
-      "αλποφο\n",
-      "αλπουργη\n",
-      "αλπουργκη\n",
-      "αλπουργος\n",
-      "αλπουρδα\n",
-      "αλπουρδι\n",
-      "αλπουρδρος\n",
-      "αλπουρζα\n",
-      "αλπουρθον\n",
-      "αλπουρκα\n",
-      "αλπουρκη\n",
-      "αλπουρλο\n",
-      "αλπουρμα\n",
-      "αλπουρμη\n",
-      "αλπουρμος\n",
-      "αλπουρνα\n",
-      "αλπουρνη\n",
-      "αλπουρνο\n",
-      "αλπουρνος\n",
-      "αλπουρος\n",
-      "αλπουρπο\n",
-      "αλπουρπος\n",
-      "αλπουρσα\n",
-      "αλπουρση\n",
-      "αλπουρστο\n",
-      "αλπουρστως\n",
-      "αλπουρτη\n",
-      "αλπουρτης\n",
-      "αλπουρτος\n",
-      "αλπουρτρο\n",
-      "αλπουρφο\n",
-      "αλσια\n",
-      "αλσιγη\n",
-      "αλσιγκη\n",
-      "αλσιγος\n",
-      "αλσιδι\n",
-      "αλσιδρος\n",
-      "αλσιζα\n",
-      "αλσινα\n",
-      "αλσιο\n",
-      "αλσιπο\n",
-      "αλσισα\n",
-      "αλσιση\n",
-      "αλσιστο\n",
-      "αλσιτρο\n",
-      "αλσιφο\n",
-      "αλσιχη\n",
-      "αλσοα\n",
-      "αλσογκη\n",
-      "αλσοδα\n",
-      "αλσοδι\n",
-      "αλσοδρος\n",
-      "αλσοζα\n",
-      "αλσοθον\n",
-      "αλσοκα\n",
-      "αλσοκη\n",
-      "αλσολο\n",
-      "αλσομα\n",
-      "αλσομη\n",
-      "αλσομος\n",
-      "αλσονος\n",
-      "αλσοπο\n",
-      "αλσοπος\n",
-      "αλσορα\n",
-      "αλσοσα\n",
-      "αλσοστο\n",
-      "αλσοτρο\n",
-      "αλσοφο\n",
-      "αλσοχη\n",
-      "αλσοψη\n",
-      "αλταγκη\n",
-      "αλταγος\n",
-      "αλταδρος\n",
-      "αλταμη\n",
-      "αλταμος\n",
-      "αλτανος\n",
-      "αλταο\n",
-      "αλταος\n",
-      "αλταπο\n",
-      "αλταπος\n",
-      "αλταση\n",
-      "αλτατης\n",
-      "αλτατρο\n",
-      "αλταχη\n",
-      "αλταψη\n",
-      "αλταργη\n",
-      "αλταργκη\n",
-      "αλταργος\n",
-      "αλταρδα\n",
-      "αλταρδι\n",
-      "αλταρδρος\n",
-      "αλταρζα\n",
-      "αλταρθον\n",
-      "αλταρκα\n",
-      "αλταρλο\n",
-      "αλταρμη\n",
-      "αλταρμος\n",
-      "αλταρνη\n",
-      "αλταρνο\n",
-      "αλταρνος\n",
-      "αλταρος\n",
-      "αλταρπο\n",
-      "αλταρπος\n",
-      "αλταρσα\n",
-      "αλταρση\n",
-      "αλταρστο\n",
-      "αλταρστως\n",
-      "αλταρτος\n",
-      "αλταρτρο\n",
-      "αλταρφο\n",
-      "αλτεα\n",
-      "αλτεγκη\n",
-      "αλτεδα\n",
-      "αλτεδι\n",
-      "αλτεδρος\n",
-      "αλτεζα\n",
-      "αλτεθον\n",
-      "αλτεκα\n",
-      "αλτεκη\n",
-      "αλτελο\n",
-      "αλτεμα\n",
-      "αλτεμη\n",
-      "αλτεμος\n",
-      "αλτενο\n",
-      "αλτενος\n",
-      "αλτεο\n",
-      "αλτεπο\n",
-      "αλτεπος\n",
-      "αλτεσα\n",
-      "αλτεστο\n",
-      "αλτετης\n",
-      "αλτετος\n",
-      "αλτετρο\n",
-      "αλτεφο\n",
-      "αλτεψη\n",
-      "αλτηγη\n",
-      "αλτηγκη\n",
-      "αλτηγος\n",
-      "αλτηδρος\n",
-      "αλτηζα\n",
-      "αλτηλο\n",
-      "αλτησα\n",
-      "αλτητρο\n",
-      "αλτηφο\n",
-      "αλωδα\n",
-      "αλωλο\n",
-      "αλωμη\n",
-      "αλωπο\n",
-      "αλωρα\n",
-      "αλωτη\n",
-      "αλωχη\n",
-      "αναζα\n",
-      "αναμη\n",
-      "ανανη\n",
-      "ανανο\n",
-      "αναο\n",
-      "αναπος\n",
-      "αναση\n",
-      "αναφο\n",
-      "ανδειγκη\n",
-      "ανδειγος\n",
-      "ανδειπος\n",
-      "ανδειστο\n",
-      "ανδειστως\n",
-      "ανδιγκη\n",
-      "ανδιγος\n",
-      "ανδιπος\n",
-      "ανδιστο\n",
-      "ανδιστως\n",
-      "ανδοα\n",
-      "ανδογκη\n",
-      "ανδογος\n",
-      "ανδοδα\n",
-      "ανδοδρος\n",
-      "ανδοθον\n",
-      "ανδοκα\n",
-      "ανδοκη\n",
-      "ανδονο\n",
-      "ανδονος\n",
-      "ανδοπο\n",
-      "ανδοπος\n",
-      "ανδοσα\n",
-      "ανδοτη\n",
-      "ανδοτης\n",
-      "ανδοτος\n",
-      "ανδοτρο\n",
-      "ανδοφο\n",
-      "ανδοψη\n",
-      "ανεα\n",
-      "ανεζα\n",
-      "ανελο\n",
-      "ανενη\n",
-      "ανενο\n",
-      "ανεο\n",
-      "ανεπο\n",
-      "ανεσα\n",
-      "ανεφο\n",
-      "ανθεα\n",
-      "ανθεγη\n",
-      "ανθεγκη\n",
-      "ανθεγος\n",
-      "ανθεδα\n",
-      "ανθεδρος\n",
-      "ανθεκα\n",
-      "ανθεκη\n",
-      "ανθελο\n",
-      "ανθεπο\n",
-      "ανθεπος\n",
-      "ανθεστο\n",
-      "ανθεστως\n",
-      "ανθετρο\n",
-      "ανθεψη\n",
-      "ανθουγη\n",
-      "ανθουγκη\n",
-      "ανθουγος\n",
-      "ανθουδι\n",
-      "ανθουδρος\n",
-      "ανθουθον\n",
-      "ανθουκη\n",
-      "ανθουλο\n",
-      "ανθουμη\n",
-      "ανθουμος\n",
-      "ανθουστο\n",
-      "ανθουστως\n",
-      "ανθουτρο\n",
-      "ανθουφο\n",
-      "ανθουχη\n",
-      "ανθρωδα\n",
-      "ανθρωζα\n",
-      "ανθρωμα\n",
-      "ανθρωνα\n",
-      "ανθρωρα\n",
-      "ανθρωστο\n",
-      "ανθρωστως\n",
-      "ανθρωτρο\n",
-      "ανθυγκη\n",
-      "ανκοα\n",
-      "ανκογκη\n",
-      "ανκογος\n",
-      "ανκοδα\n",
-      "ανκοδρος\n",
-      "ανκοζα\n",
-      "ανκοθον\n",
-      "ανκοκα\n",
-      "ανκοκη\n",
-      "ανκολο\n",
-      "ανκονο\n",
-      "ανκονος\n",
-      "ανκορα\n",
-      "ανκοσα\n",
-      "ανκοτη\n",
-      "ανκοτης\n",
-      "ανκοτος\n",
-      "ανκοτρο\n",
-      "ανκοφο\n",
-      "ανλαγος\n",
-      "ανλαδρος\n",
-      "ανλαθον\n",
-      "ανλαμη\n",
-      "ανλαμος\n",
-      "ανλανο\n",
-      "ανλανος\n",
-      "ανλαο\n",
-      "ανλαος\n",
-      "ανλαπο\n",
-      "ανλαπος\n",
-      "ανλαση\n",
-      "ανλαστο\n",
-      "ανλατρο\n",
-      "ανλαφο\n",
-      "ανλαχη\n",
-      "ανσιγκη\n",
-      "ανσιγος\n",
-      "ανσιζα\n",
-      "ανσιθον\n",
-      "ανσινη\n",
-      "ανσιπος\n",
-      "ανσιστο\n",
-      "ανσιτρο\n",
-      "ανσιφο\n",
-      "ανσοα\n",
-      "ανσογκη\n",
-      "ανσογος\n",
-      "ανσοδα\n",
-      "ανσοδρος\n",
-      "ανσοζα\n",
-      "ανσοθον\n",
-      "ανσοκα\n",
-      "ανσοκη\n",
-      "ανσολο\n",
-      "ανσονα\n",
-      "ανσονη\n",
-      "ανσονο\n",
-      "ανσονος\n",
-      "ανσοπο\n",
-      "ανσοπος\n",
-      "ανσορα\n",
-      "ανσοσα\n",
-      "ανσοτης\n",
-      "ανσοτρο\n",
-      "ανσοψη\n",
-      "ανστεα\n",
-      "ανστεγκη\n",
-      "ανστεδα\n",
-      "ανστεδι\n",
-      "ανστεδρος\n",
-      "ανστεζα\n",
-      "ανστεθον\n",
-      "ανστεκα\n",
-      "ανστεκη\n",
-      "ανστελο\n",
-      "ανστεμα\n",
-      "ανστεμη\n",
-      "ανστεμος\n",
-      "ανστενος\n",
-      "ανστεο\n",
-      "ανστεπο\n",
-      "ανστεπος\n",
-      "ανστεσα\n",
-      "ανστεση\n",
-      "ανστεστο\n",
-      "ανστεστως\n",
-      "ανστετης\n",
-      "ανστετος\n",
-      "ανστετρο\n",
-      "ανστεφο\n",
-      "ανστεψη\n",
-      "ανστηγη\n",
-      "ανστηγκη\n",
-      "ανστηγος\n",
-      "ανστηδα\n",
-      "ανστηδρος\n",
-      "ανστηζα\n",
-      "ανστηθον\n",
-      "ανστηλο\n",
-      "ανστηνα\n",
-      "ανστηνη\n",
-      "ανστηνο\n",
-      "ανστηνος\n",
-      "ανστησα\n",
-      "ανστηστο\n",
-      "ανστηστως\n",
-      "ανστητη\n",
-      "ανστητης\n",
-      "ανστητος\n",
-      "ανστητρο\n",
-      "ανστηφο\n",
-      "ανσωα\n",
-      "ανσωγος\n",
-      "ανσωδα\n",
-      "ανσωζα\n",
-      "ανσωθον\n",
-      "ανσωκα\n",
-      "ανσωλο\n",
-      "ανσωνα\n",
-      "ανσωνη\n",
-      "ανσωνο\n",
-      "ανσωνος\n",
-      "ανσωο\n",
-      "ανσωος\n",
-      "ανσωπο\n",
-      "ανσωπος\n",
-      "ανσωρα\n",
-      "ανσωσα\n",
-      "ανσωτης\n",
-      "ανσωτρο\n",
-      "ανσωψη\n",
-      "ανταγος\n",
-      "ανταδρος\n",
-      "ανταμος\n",
-      "αντανη\n",
-      "αντανο\n",
-      "αντανος\n",
-      "ανταο\n",
-      "ανταος\n",
-      "ανταπος\n",
-      "αντατρο\n",
-      "ανταργκη\n",
-      "ανταργος\n",
-      "ανταρδρος\n",
-      "ανταρλο\n",
-      "ανταρμος\n",
-      "ανταρνο\n",
-      "ανταρνος\n",
-      "ανταρπο\n",
-      "ανταρπος\n",
-      "ανταρστο\n",
-      "ανταρστως\n",
-      "ανταρτρο\n",
-      "ανταρφο\n",
-      "αντεγκη\n",
-      "αντεδρος\n",
-      "αντεθον\n",
-      "αντεπος\n",
-      "αντεστο\n",
-      "αντηγκη\n",
-      "αντηγος\n",
-      "ανωδα\n",
-      "ανωλο\n",
-      "ανωπο\n",
-      "ανωφο\n",
-      "αυαδα\n",
-      "αυαδρος\n",
-      "αυαζα\n",
-      "αυαλο\n",
-      "αυαμα\n",
-      "αυαμη\n",
-      "αυαπο\n",
-      "αυαπος\n",
-      "αυαχη\n",
-      "αυγια\n",
-      "αυγιγκη\n",
-      "αυγιδρος\n",
-      "αυγικα\n",
-      "αυγιο\n",
-      "αυγιτρο\n",
-      "αυγοα\n",
-      "αυγογκη\n",
-      "αυγοδα\n",
-      "αυγοδρος\n",
-      "αυγοθον\n",
-      "αυγοκα\n",
-      "αυγολο\n",
-      "αυγομος\n",
-      "αυγοπο\n",
-      "αυγοπος\n",
-      "αυγοσα\n",
-      "αυγοτης\n",
-      "αυγοτρο\n",
-      "αυγοφο\n",
-      "αυγραγη\n",
-      "αυγραγκη\n",
-      "αυγραγος\n",
-      "αυγραδα\n",
-      "αυγραδι\n",
-      "αυγραδρος\n",
-      "αυγραζα\n",
-      "αυγραθον\n",
-      "αυγρακα\n",
-      "αυγρακη\n",
-      "αυγραλο\n",
-      "αυγραμα\n",
-      "αυγραμη\n",
-      "αυγραμος\n",
-      "αυγρανα\n",
-      "αυγρανο\n",
-      "αυγρανος\n",
-      "αυγραο\n",
-      "αυγραος\n",
-      "αυγραπο\n",
-      "αυγραπος\n",
-      "αυγραρα\n",
-      "αυγρασα\n",
-      "αυγραση\n",
-      "αυγραστο\n",
-      "αυγραστως\n",
-      "αυγρατη\n",
-      "αυγρατης\n",
-      "αυγρατος\n",
-      "αυγρατρο\n",
-      "αυγραχη\n",
-      "αυγραψη\n",
-      "αυγραμα\n",
-      "αυγραμδα\n",
-      "αυγραμνα\n",
-      "αυγραμνη\n",
-      "αυγραμνο\n",
-      "αυγραμνος\n",
-      "αυγραμο\n",
-      "αυγραμος\n",
-      "αυγραμπο\n",
-      "αυγραμπος\n",
-      "αυγραμφο\n",
-      "αυγραμψη\n",
-      "αυδειγη\n",
-      "αυδειγκη\n",
-      "αυδειδι\n",
-      "αυδειδρος\n",
-      "αυδεινο\n",
-      "αυδειπο\n",
-      "αυδειστο\n",
-      "αυδειστως\n",
-      "αυδειτρο\n",
-      "αυδειφο\n",
-      "αυδειχη\n",
-      "αυδειψη\n",
-      "αυδιγη\n",
-      "αυδιγκη\n",
-      "αυδιδι\n",
-      "αυδιδρος\n",
-      "αυδινο\n",
-      "αυδιο\n",
-      "αυδιπο\n",
-      "αυδιστο\n",
-      "αυδιστως\n",
-      "αυδιτρο\n",
-      "αυδιφο\n",
-      "αυδιχη\n",
-      "αυδιψη\n",
-      "αυδογκη\n",
-      "αυδογος\n",
-      "αυδοδρος\n",
-      "αυδοθον\n",
-      "αυδονος\n",
-      "αυδοπο\n",
-      "αυδοπος\n",
-      "αυδοστο\n",
-      "αυδοστως\n",
-      "αυδοτρο\n",
-      "αυδοφο\n",
-      "αυεδα\n",
-      "αυεδι\n",
-      "αυεζα\n",
-      "αυεθον\n",
-      "αυεκα\n",
-      "αυεκη\n",
-      "αυελο\n",
-      "αυεπο\n",
-      "αυεπος\n",
-      "αυεσα\n",
-      "αυεση\n",
-      "αυετη\n",
-      "αυθεα\n",
-      "αυθεγη\n",
-      "αυθεγκη\n",
-      "αυθεγος\n",
-      "αυθεδα\n"
-     ]
-    }
-   ],
-   "source": [
-    "simthreshold = 0.8\n",
-    "outfile = \"Pseudo\" + postype + str(simthreshold) + \"_wClean.txt\"\n",
-    "# Check if the file exists\n",
-    "if os.path.exists(\"outfile\"):\n",
-    "    # Delete the file\n",
-    "    os.remove(\"outfile\")\n",
-    "# Check if pseudoword is acceptable and write to outfile\n",
-    "with open(outfile, 'a') as file:\n",
-    "    for entry in combinations_gen:\n",
-    "        joined_string = join_tuple(entry)\n",
-    "        test = accept_reject_tests(joined_string, simthreshold)\n",
-    "        if test:\n",
-    "            print(joined_string)\n",
-    "            file.write(joined_string + '\\n')"
-   ]
-  },
-  {
-   "cell_type": "markdown",
-   "metadata": {},
-   "source": [
-    "## Test"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 38,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "# syllabify('βιρελγκη')"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 39,
-   "metadata": {},
-   "outputs": [
-    {
-     "data": {
-      "text/plain": [
-       "False"
-      ]
-     },
-     "execution_count": 39,
-     "metadata": {},
-     "output_type": "execute_result"
-    }
-   ],
-   "source": [
-    "ngrams_2, ngrams_3 = generate_ngrams('βιρελγκη')\n",
-    "search_ngrams_in_lexicon(lex, ngrams_2, ngrams_3)"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "metadata": {},
-   "outputs": [],
-   "source": []
-  }
- ],
- "metadata": {
-  "kernelspec": {
-   "display_name": "Python 3 (ipykernel)",
-   "language": "python",
-   "name": "python3"
-  },
-  "language_info": {
-   "codemirror_mode": {
-    "name": "ipython",
-    "version": 3
-   },
-   "file_extension": ".py",
-   "mimetype": "text/x-python",
-   "name": "python",
-   "nbconvert_exporter": "python",
-   "pygments_lexer": "ipython3",
-   "version": "3.10.13"
-  }
- },
- "nbformat": 4,
- "nbformat_minor": 2
-}
+import itertools
+import numpy as np
+import os
+import pandas as pd
+import random
+
+# Import jellyfish for string comparisons
+try:
+    import jellyfish
+except ImportError:
+    print("Warning: jellyfish module not installed. Please install with 'pip install jellyfish'")
+
+# Import greek_accentuation for syllabification
+try:
+    from greek_accentuation.syllabify import syllabify
+    from greek_accentuation.characters import remove_diacritic, add_diacritic
+except ImportError:
+    print("Warning: greek_accentuation not installed. Please install with 'pip install greek-accentuation'")
+
+def add_random_stress(word, part_of_speech="All"):
+    """
+    Adds an acute accent (oxia) to the last vowel of a randomly chosen eligible syllable
+    (ultima, penult, or antepenult) of a Greek word following Greek stress rules.
+    
+    Stress Rules:
+    - For verbs ending in -αι: stress is NEVER on the ultima (final syllable)
+    - For all other verb forms: stress is NEVER on the antepenult (APU)
+    - For non-verbs: standard Greek stress rules apply (ultima, penult, or antepenult)
+    
+    Returns the stressed word.
+    """
+    vowels = 'αεηιουω'
+    sylls = syllabify(word)
+    n = len(sylls)
+    
+    # Initialize eligible positions (using negative indexing: -1=ultima, -2=penult, -3=antepenult)
+    eligible = []
+    
+    if part_of_speech == "verb":
+        # Check if verb ends in -αι
+        if word.endswith("αι"):
+            # Rule: stress is NEVER on the ultima for verbs ending in -αι
+            # So eligible positions are penult and antepenult only
+            if n >= 2:
+                eligible.append(-2)  # penult
+            if n >= 3:
+                eligible.append(-3)  # antepenult
+        else:
+            # Rule: for all other verb forms, stress is NEVER on the antepenult
+            # So eligible positions are ultima and penult only
+            eligible.append(-1)  # ultima
+            if n >= 2:
+                eligible.append(-2)  # penult
+    else:
+        # For non-verbs: standard Greek stress rules (can be on any of the last 3 syllables)
+        eligible.append(-1)  # ultima
+        if n >= 2:
+            eligible.append(-2)  # penult
+        if n >= 3:
+            eligible.append(-3)  # antepenult
+    
+    # If no eligible positions (shouldn't happen with valid Greek words), default to ultima
+    if not eligible:
+        eligible = [-1]
+    
+    # Randomly choose from eligible positions
+    target = np.random.choice(eligible)
+    syll = sylls[target]
+    
+    # Find the last vowel in the target syllable
+    last_vowel_idx = None
+    for i, char in enumerate(syll):
+        if char in vowels:
+            last_vowel_idx = i
+    
+    if last_vowel_idx is not None:
+        stressed_vowel = add_diacritic(syll[last_vowel_idx], '\u0301')  # oxia
+        sylls[target] = syll[:last_vowel_idx] + stressed_vowel + syll[last_vowel_idx+1:]
+    
+    return ''.join(sylls)
+
+class GreekPseudowordGenerator:
+    def __init__(self):
+        self.lexicons = {}
+        self.combined_lex = set()
+        # Define function to remove oxia
+        try:
+            self.remove_oxia = remove_diacritic("\u0301")
+        except NameError:
+            # Fallback if greek_accentuation isn't available
+            self.remove_oxia = lambda s: s
+        
+    def load_lexicons(self, greeklex_path, all_num_clean_path=None):
+        """Load lexicons from files"""
+        # Load first lexicon
+        try:
+            print(f"Loading primary lexicon from {greeklex_path}...")
+            self.lexicons["greeklex"] = pd.read_excel(greeklex_path)
+            # Convert Word column to string to avoid type issues
+            self.lexicons["greeklex"]["Word"] = self.lexicons["greeklex"]["Word"].astype(str)
+            self.lexicons["greeklex"]["Word"] = self.lexicons["greeklex"]["Word"].apply(self.remove_oxia)
+            
+            # Initialize combined lexicon with first lexicon
+            self.combined_lex = set(self.lexicons["greeklex"]["Word"].values)
+            
+            # Load second lexicon if provided
+            if all_num_clean_path:
+                print(f"Loading secondary lexicon from {all_num_clean_path}...")
+                try:
+                    excel_file = pd.ExcelFile(all_num_clean_path)
+                    dfs = []
+                    for sheet_name in excel_file.sheet_names:
+                        dftemp = excel_file.parse(sheet_name)
+                        dfs.append(dftemp)
+                    self.lexicons["all_num_clean"] = pd.concat(dfs, ignore_index=True)
+                    
+                    # Check if 'spel' column exists in second lexicon
+                    if 'spel' in self.lexicons["all_num_clean"].columns:
+                        # Ensure values are strings
+                        self.lexicons["all_num_clean"]["spel"] = self.lexicons["all_num_clean"]["spel"].astype(str)
+                        # Add to combined lexicon
+                        self.combined_lex.update(set(self.lexicons["all_num_clean"]["spel"].values))
+                    else:
+                        print("Warning: 'spel' column not found in second lexicon.")
+                        # List columns found in the second lexicon
+                        print(f"Columns found: {list(self.lexicons['all_num_clean'].columns)}")
+                except Exception as e:
+                    print(f"Warning: Could not fully process second lexicon: {e}")
+            
+            return self.get_available_pos()
+        except Exception as e:
+            print(f"Error loading lexicons: {e}")
+            raise
+        
+    def get_available_pos(self):
+        """Return available parts of speech in the lexicon"""
+        return np.unique(self.lexicons["greeklex"].Pos.values).tolist()
+    
+    def phonetic_string(self, input_string):
+        """Convert string to phonetic representation"""
+        if not isinstance(input_string, str):
+            input_string = str(input_string)
+            
+        substitutions = {
+            "αι": "ε",
+            "ει": "ι",
+            "οι": "ι",
+            "υι": "ι",
+            "ω": "ο",
+            "η": "ι",
+            "υ": "ι"
+        }
+        output_string = input_string
+        for pattern, replacement in substitutions.items():
+            output_string = output_string.replace(pattern, replacement)
+        return output_string
+    
+    def max_consecutively_repeated_letters(self, string):
+        """Count maximum consecutively repeated letters"""
+        if not isinstance(string, str):
+            string = str(string)
+            
+        max_count = 0
+        current_count = 0
+        previous_letter = None
+
+        for letter in string:
+            if letter.isalpha():
+                letter = letter.lower()
+                if letter == previous_letter:
+                    current_count += 1
+                else:
+                    current_count = 1
+                    previous_letter = letter
+
+                if current_count > max_count:
+                    max_count = current_count
+        return max_count
+    
+    def calculate_similarity(self, string1, string2):
+        """Calculate similarity between two strings"""
+        # Ensure inputs are strings
+        if not isinstance(string1, str):
+            string1 = str(string1)
+        if not isinstance(string2, str):
+            string2 = str(string2)
+            
+        levenshtein_distance = jellyfish.levenshtein_distance(string1, string2)
+        similarity_ratio = 1 - (levenshtein_distance / max(len(string1), len(string2)))
+        return similarity_ratio
+    
+    def generate_ngrams(self, text):
+        """Generate n-grams from text"""
+        if not isinstance(text, str):
+            text = str(text)
+            
+        ngrams_2 = [text[i:i+2] for i in range(len(text)-1)]
+        ngrams_3 = [text[i:i+3] for i in range(len(text)-2)]
+        return ngrams_2, ngrams_3
+    
+    def search_ngrams_in_lexicon(self, ngrams_2, ngrams_3):
+        """Search n-grams in lexicon"""
+        for ngram in ngrams_2 + ngrams_3:
+            found = False
+            for word in self.combined_lex:
+                if ngram in word:
+                    found = True
+                    break
+            if not found:
+                return False
+        return True
+    
+    def accept_reject_tests(self, string1, simthreshold=0.5):
+        """Apply tests to accept or reject pseudowords"""
+        # Ensure input is a string
+        if not isinstance(string1, str):
+            string1 = str(string1)
+            
+        # Test 1: Reject if the word exists in the lexicon
+        if string1 in self.combined_lex:
+            return False
+        
+        # Test 2: Reject if there are consecutively repeated letters
+        if self.max_consecutively_repeated_letters(string1) > 1:
+            return False
+        
+        # Test 3: Check similarity and phonetic_similarity
+        # For performance, sample a subset of the lexicon
+        lexicon_sample = random.sample(list(self.combined_lex), min(1000, len(self.combined_lex)))
+        for string2 in lexicon_sample:
+            similarity_ratio = self.calculate_similarity(string1, string2)
+            phonetic_similarity_ratio = self.calculate_similarity(
+                self.phonetic_string(string1), self.phonetic_string(string2))
+            check_ratio = max(similarity_ratio, phonetic_similarity_ratio)
+            if check_ratio > simthreshold:
+                return False
+                
+        # Test 4: Check if all n-grams exist in the lexicon
+        ngrams_2, ngrams_3 = self.generate_ngrams(string1)
+        test = self.search_ngrams_in_lexicon(ngrams_2, ngrams_3)
+        if not test:
+            return False
+
+        return True
+
+    def get_balanced_syllable_samples(self, syldict, num_samples=100):
+        """
+        Create a balanced sample of syllable combinations to ensure variety in first syllables
+        """
+        balanced_samples = []
+        
+        # Get unique first syllables
+        first_syllables = list(syldict[1])
+        
+        # If there are too few first syllables, just return regular combinations
+        if len(first_syllables) <= 1:
+            return None
+            
+        # Calculate how many samples to take for each first syllable
+        samples_per_first_syllable = max(1, num_samples // len(first_syllables))
+        
+        # For each first syllable, create some combinations
+        for first_syl in first_syllables:
+            # Create list of syllables with this specific first syllable
+            syllable_list = [[first_syl]]
+            
+            # Add other syllable positions
+            for pos in range(2, len(syldict) + 1):
+                syllable_list.append(list(syldict[pos]))
+                
+            # Generate some combinations with this first syllable
+            for _ in range(samples_per_first_syllable):
+                combination = [first_syl]
+                for pos in range(1, len(syldict)):
+                    combination.append(random.choice(syllable_list[pos]))
+                balanced_samples.append(combination)
+                
+        # Shuffle the samples
+        random.shuffle(balanced_samples)
+        return balanced_samples
+    
+    def get_syllable_dict(self, postype="noun", num_syllables=3, freq_threshold=5, status_callback=None):
+        """Generate syllable dictionary without generating words"""
+        # Send status update
+        if status_callback:
+            status_callback(f"Analyzing {num_syllables}-syllable words for part of speech: {postype}...")
+        
+        # Filter words by part of speech and frequency
+        filtered_df = self.lexicons["greeklex"][
+            (self.lexicons["greeklex"].Pos == postype) & 
+            (self.lexicons["greeklex"].zipfFreq > freq_threshold)
+        ]
+        
+        # Extract Word column as a Series
+        df = filtered_df["Word"]
+        
+        # Create syllable dictionary
+        syldict = dict()
+        for n in range(num_syllables):
+            syldict[n+1] = list()
+
+        # Collect syllables from filtered words
+        for wrd in df.values:
+            if isinstance(wrd, str):
+                q = self.remove_oxia(wrd)
+                try:
+                    sl = syllabify(q)
+                    if len(sl) == num_syllables:
+                        for n in range(num_syllables):
+                            syldict[n+1].append(sl[n])
+                except Exception as e:
+                    continue
+
+        # Get unique syllables
+        for k, v in syldict.items():
+            syldict[k] = np.unique(v)
+            
+        # Check if we have enough syllables to generate words
+        empty_positions = [k for k, v in syldict.items() if len(v) == 0]
+        if empty_positions:
+            error_msg = f"Not enough syllables for position(s): {empty_positions}"
+            if status_callback:
+                status_callback(f"ERROR: {error_msg}")
+            return None
+            
+        # Send status update about syllable counts
+        if status_callback:
+            syllable_info = ", ".join([f"Position {k}: {len(v)} syllables" for k, v in syldict.items()])
+            status_callback(f"Found syllables: {syllable_info}")
+            
+        return syldict
+    
+    def generate_pseudowords_with_syllables(self, syldict, included_last_syllables=None, 
+                                           add_stress=False, part_of_speech="All",
+                                           sim_threshold=0.8, max_words=100, status_callback=None):
+        """Generate pseudowords with specific syllable constraints"""
+        # Track the number of words generated
+        count = 0
+        attempts = 0
+        max_attempts = max_words * 100  # Limit attempts to avoid infinite loops
+        accepted_words = []
+        
+        # Filter last syllables if specified
+        if included_last_syllables and len(syldict) >= 3:
+            # Create a copy to avoid modifying the original
+            filtered_syldict = dict(syldict)
+            # Filter last syllables (position = len(syldict))
+            filtered_syldict[len(syldict)] = np.array([s for s in syldict[len(syldict)] 
+                                                    if s in included_last_syllables])
+            # Check if we have any syllables left
+            if len(filtered_syldict[len(syldict)]) == 0:
+                if status_callback:
+                    status_callback("ERROR: No last syllables remaining after filtering")
+                return []
+            syldict = filtered_syldict
+            
+            if status_callback:
+                status_callback(f"Using {len(syldict[len(syldict)])} selected last syllables")
+        
+        # Try to get balanced samples to ensure variety in first syllables
+        balanced_samples = self.get_balanced_syllable_samples(syldict, max_words * 5)
+        
+        if balanced_samples:
+            # Use balanced samples for better variety
+            if status_callback:
+                status_callback("Using balanced sampling to ensure variety in first syllables...")
+            
+            # Test the balanced samples
+            for combination in balanced_samples:
+                attempts += 1
+                if count >= max_words or attempts >= max_attempts:
+                    break
+                    
+                joined_string = ''.join(combination)
+                
+                if self.accept_reject_tests(joined_string, sim_threshold):
+                    # Apply stress if requested
+                    if add_stress:
+                        joined_string = add_random_stress(joined_string, part_of_speech)
+                    
+                    accepted_words.append(joined_string)
+                    count += 1
+                    
+                    if status_callback and count % 5 == 0:
+                        status_callback(f"Generated {count} pseudowords...")
+        else:
+            # Fallback to traditional method
+            if status_callback:
+                status_callback("Using standard sampling method...")
+                
+            # Standard method using itertools
+            iterlist = [list(v) for v in syldict.values()]
+            for entry in itertools.product(*iterlist):
+                attempts += 1
+                if count >= max_words or attempts >= max_attempts:
+                    break
+                    
+                joined_string = ''.join(entry)
+                
+                if self.accept_reject_tests(joined_string, sim_threshold):
+                    # Apply stress if requested
+                    if add_stress:
+                        joined_string = add_random_stress(joined_string, part_of_speech)
+                    
+                    accepted_words.append(joined_string)
+                    count += 1
+                    
+                    if status_callback and count % 5 == 0:
+                        status_callback(f"Generated {count} pseudowords...")
+                    
+        if status_callback:
+            status_callback(f"COMPLETE: Generated {len(accepted_words)} pseudowords.")
+            
+        return accepted_words
+    
+    def generate_pseudowords(self, postype="noun", num_syllables=3, freq_threshold=5, sim_threshold=0.8, 
+                            max_words=100, included_last_syllables=None, add_stress=False,
+                            status_callback=None):
+        """Generate pseudowords"""
+        # Send status update
+        if status_callback:
+            status_callback(f"Generating {num_syllables}-syllable pseudowords for part of speech: {postype}...")
+            
+        # Handle "all" option - process all five POS types
+        if postype == "all":
+            postypes = ["noun", "verb", "adj", "adv", "prep"]
+            words_per_type = max(1, max_words // len(postypes))  # Distribute words evenly
+            if status_callback:
+                status_callback(f"Processing all parts of speech: {', '.join(postypes)}")
+            
+            generated_words = []
+            for pos in postypes:
+                if status_callback:
+                    status_callback(f"Generating {words_per_type} {pos} pseudowords...")
+                
+                # Get syllable dictionary for this POS
+                syldict = self.get_syllable_dict(pos, num_syllables, freq_threshold, status_callback)
+                
+                if not syldict:
+                    if status_callback:
+                        status_callback(f"Skipping {pos} due to insufficient syllables")
+                    continue
+                    
+                # Generate pseudowords with the syllable dictionary
+                pos_words = self.generate_pseudowords_with_syllables(
+                    syldict,
+                    included_last_syllables=included_last_syllables,
+                    add_stress=add_stress,
+                    part_of_speech=pos,
+                    sim_threshold=sim_threshold,
+                    max_words=words_per_type,
+                    status_callback=status_callback
+                )
+                generated_words.extend(pos_words)
+                if status_callback:
+                    status_callback(f"Generated {len(pos_words)} {pos} pseudowords")
+            
+            if status_callback:
+                status_callback(f"Total pseudowords generated: {len(generated_words)}")
+            return generated_words
+        else:
+            # Original logic for a single POS type
+            # Get syllable dictionary
+            syldict = self.get_syllable_dict(postype, num_syllables, freq_threshold, status_callback)
+            
+            if not syldict:
+                return []
+                
+            # Generate pseudowords with the syllable dictionary
+            return self.generate_pseudowords_with_syllables(
+                syldict,
+                included_last_syllables=included_last_syllables,
+                add_stress=add_stress,
+                part_of_speech=postype,
+                sim_threshold=sim_threshold,
+                max_words=max_words,
+                status_callback=status_callback
+            )
+
+# Simple command line usage
+if __name__ == "__main__":
+    generator = GreekPseudowordGenerator()
+    
+    print("Greek Pseudoword Generator")
+    print("=========================")
+    
+    # Check for lexicon files
+    greeklex_path = os.path.join('data', 'GreekLex2.xlsx')
+    all_num_clean_path = os.path.join('data', 'all_num_clean_ns.xls')
+    
+    if not os.path.exists('data'):
+        os.makedirs('data')
+        
+    missing_files = []
+    if not os.path.exists(greeklex_path):
+        missing_files.append("GreekLex2.xlsx")
+    if not os.path.exists(all_num_clean_path):
+        missing_files.append("all_num_clean_ns.xls")
+    
+    if missing_files:
+        print("\nERROR: Missing required lexicon file(s):")
+        for file in missing_files:
+            print(f"  - {file}")
+        print("\nPlease place these files in the 'data' directory.")
+        exit(1)
+    
+    # Load lexicons
+    print("\nLoading lexicons...")
+    available_pos = generator.load_lexicons(greeklex_path, all_num_clean_path)
+    
+    # Filter to only show allowed POS types
+    allowed_pos = ["noun", "verb", "adj", "adv", "prep"]
+    filtered_pos = [pos for pos in available_pos if pos in allowed_pos]
+    
+    print(f"\nAvailable parts of speech: {', '.join(filtered_pos)}")
+    
+    # Parameters
+    print("\nGeneration Parameters:")
+    print("=====================")
+    
+    # Part of speech
+    print(f"Available options: {', '.join(['all'] + filtered_pos)}")
+    postype = input("Enter part of speech (or 'all' for all types): ").strip()
+    if postype not in ['all'] + filtered_pos:
+        print(f"WARNING: '{postype}' not found in available parts of speech. Using 'all' instead.")
+        postype = "all"
+        
+    num_syllables = int(input("Enter number of syllables (1-5): ").strip())
+    max_words = int(input("Enter maximum number of words to generate: ").strip())
+    
+    # Greek stress rules option
+    add_stress = input("Apply Greek stress rules? (y/n): ").strip().lower() == 'y'
+    
+    # Generate pseudowords
+    def print_status(message):
+        print(message)
+        
+    print("\nGenerating pseudowords...")
+    pseudowords = generator.generate_pseudowords(
+        postype=postype,
+        num_syllables=num_syllables,
+        max_words=max_words,
+        add_stress=add_stress,
+        status_callback=print_status
+    )
+    
+    # Output results
+    print("\nGenerated Pseudowords:")
+    print("=====================")
+    
+    if not pseudowords:
+        print("No pseudowords were generated. Try adjusting your parameters.")
+    else:
+        for i, word in enumerate(pseudowords, 1):
+            print(f"{i}. {word}")
+        
+        print(f"\nTotal: {len(pseudowords)} pseudowords generated")
+        
+        if add_stress:
+            print("Note: Greek stress rules were applied automatically based on part of speech")
+    
+    # Save to file
+    if pseudowords:
+        save_option = input("\nSave to file? (y/n): ").strip().lower()
+        if save_option == 'y':
+            # Create filename with stress indicator
+            stress_suffix = "_stressed" if add_stress else ""
+            filename = f"pseudowords_{postype}_{num_syllables}syl{stress_suffix}.txt"
+            
+            try:
+                with open(filename, 'w', encoding='utf-8') as file:
+                    for word in pseudowords:
+                        file.write(word + '\n')
+                print(f"Saved to {filename}")
+            except Exception as e:
+                print(f"Error saving file: {e}")
+    
+    print("\nThank you for using SyBig-r-Morph!")

@@ -15,9 +15,71 @@ except ImportError:
 # Import greek_accentuation for syllabification
 try:
     from syllabify import syllabify
-    from greek_accentuation.characters import remove_diacritic
+    from greek_accentuation.characters import remove_diacritic, add_diacritic
 except ImportError:
     print("Warning: greek_accentuation not installed. Please install with 'pip install greek-accentuation'")
+
+def add_random_stress(word, part_of_speech="All"):
+    """
+    Adds an acute accent (oxia) to the last vowel of a randomly chosen eligible syllable
+    (ultima, penult, or antepenult) of a Greek word following Greek stress rules.
+    
+    Stress Rules:
+    - For verbs ending in -αι: stress is NEVER on the ultima (final syllable)
+    - For all other verb forms: stress is NEVER on the antepenult (APU)
+    - For non-verbs: standard Greek stress rules apply (ultima, penult, or antepenult)
+    
+    Returns the stressed word.
+    """
+    vowels = 'αεηιουω'
+    sylls = syllabify(word)
+    n = len(sylls)
+    
+    # Initialize eligible positions (using negative indexing: -1=ultima, -2=penult, -3=antepenult)
+    eligible = []
+    
+    if part_of_speech == "verb":
+        # Check if verb ends in -αι
+        if word.endswith("αι"):
+            # Rule: stress is NEVER on the ultima for verbs ending in -αι
+            # So eligible positions are penult and antepenult only
+            if n >= 2:
+                eligible.append(-2)  # penult
+            if n >= 3:
+                eligible.append(-3)  # antepenult
+        else:
+            # Rule: for all other verb forms, stress is NEVER on the antepenult
+            # So eligible positions are ultima and penult only
+            eligible.append(-1)  # ultima
+            if n >= 2:
+                eligible.append(-2)  # penult
+    else:
+        # For non-verbs: standard Greek stress rules (can be on any of the last 3 syllables)
+        eligible.append(-1)  # ultima
+        if n >= 2:
+            eligible.append(-2)  # penult
+        if n >= 3:
+            eligible.append(-3)  # antepenult
+    
+    # If no eligible positions (shouldn't happen with valid Greek words), default to ultima
+    if not eligible:
+        eligible = [-1]
+    
+    # Randomly choose from eligible positions
+    target = np.random.choice(eligible)
+    syll = sylls[target]
+    
+    # Find the last vowel in the target syllable
+    last_vowel_idx = None
+    for i, char in enumerate(syll):
+        if char in vowels:
+            last_vowel_idx = i
+    
+    if last_vowel_idx is not None:
+        stressed_vowel = add_diacritic(syll[last_vowel_idx], '\u0301')  # oxia
+        sylls[target] = syll[:last_vowel_idx] + stressed_vowel + syll[last_vowel_idx+1:]
+    
+    return ''.join(sylls)
 
 class GreekPseudowordGenerator:
     # Include your entire GreekPseudowordGenerator class here
@@ -222,12 +284,13 @@ class GreekPseudowordGenerator:
         random.shuffle(balanced_samples)
         return balanced_samples
     
-    def generate_pseudowords(self, postype="noun", num_syllables=3, freq_threshold=5, sim_threshold=0.8, 
-                            max_words=100, status_callback=None):
-        """Generate pseudowords"""
+    
+    
+    def get_syllable_dict(self, postype="noun", num_syllables=3, freq_threshold=5, status_callback=None):
+        """Generate syllable dictionary without generating words"""
         # Send status update
         if status_callback:
-            status_callback(f"Generating {num_syllables}-syllable pseudowords for part of speech: {postype}...")
+            status_callback(f"Analyzing {num_syllables}-syllable words for part of speech: {postype}...")
         
         # Filter words by part of speech and frequency
         filtered_df = self.lexicons["greeklex"][
@@ -265,21 +328,40 @@ class GreekPseudowordGenerator:
             error_msg = f"Not enough syllables for position(s): {empty_positions}"
             if status_callback:
                 status_callback(f"ERROR: {error_msg}")
-            return []
+            return None
             
         # Send status update about syllable counts
         if status_callback:
             syllable_info = ", ".join([f"Position {k}: {len(v)} syllables" for k, v in syldict.items()])
             status_callback(f"Found syllables: {syllable_info}")
             
-        # Generate combinations
-        iterlist = [list(v) for v in syldict.values()]
-        
+        return syldict
+    
+    def generate_pseudowords_with_syllables(self, syldict, included_last_syllables=None, 
+                                           sim_threshold=0.8, max_words=100, status_callback=None):
+        """Generate pseudowords with specific syllable constraints"""
         # Track the number of words generated
         count = 0
         attempts = 0
         max_attempts = max_words * 100  # Limit attempts to avoid infinite loops
         accepted_words = []
+        
+        # Filter last syllables if specified
+        if included_last_syllables and len(syldict) >= 3:
+            # Create a copy to avoid modifying the original
+            filtered_syldict = dict(syldict)
+            # Filter last syllables (position = len(syldict))
+            filtered_syldict[len(syldict)] = np.array([s for s in syldict[len(syldict)] 
+                                                    if s in included_last_syllables])
+            # Check if we have any syllables left
+            if len(filtered_syldict[len(syldict)]) == 0:
+                if status_callback:
+                    status_callback("ERROR: No last syllables remaining after filtering")
+                return []
+            syldict = filtered_syldict
+            
+            if status_callback:
+                status_callback(f"Using {len(syldict[len(syldict)])} selected last syllables")
         
         # Try to get balanced samples to ensure variety in first syllables
         balanced_samples = self.get_balanced_syllable_samples(syldict, max_words * 5)
@@ -310,6 +392,7 @@ class GreekPseudowordGenerator:
                 
             # Standard method using itertools
             import itertools
+            iterlist = [list(v) for v in syldict.values()]
             for entry in itertools.product(*iterlist):
                 attempts += 1
                 if count >= max_words or attempts >= max_attempts:
@@ -328,6 +411,28 @@ class GreekPseudowordGenerator:
             status_callback(f"COMPLETE: Generated {len(accepted_words)} pseudowords.")
             
         return accepted_words
+    
+    def generate_pseudowords(self, postype="noun", num_syllables=3, freq_threshold=5, sim_threshold=0.8, 
+                            max_words=100, included_last_syllables=None, status_callback=None):
+        """Generate pseudowords"""
+        # Send status update
+        if status_callback:
+            status_callback(f"Generating {num_syllables}-syllable pseudowords for part of speech: {postype}...")
+            
+        # Get syllable dictionary
+        syldict = self.get_syllable_dict(postype, num_syllables, freq_threshold, status_callback)
+        
+        if not syldict:
+            return []
+            
+        # Generate pseudowords with the syllable dictionary
+        return self.generate_pseudowords_with_syllables(
+            syldict,
+            included_last_syllables=included_last_syllables,
+            sim_threshold=sim_threshold,
+            max_words=max_words,
+            status_callback=status_callback
+        )
 
 
 # Initialize Flask app
@@ -412,6 +517,115 @@ def load_lexicons():
             'status': generation_status
         })
 
+@app.route('/get_syllables', methods=['POST'])
+def get_syllables():
+    """Get available syllables for the specified parameters"""
+    global generation_status
+    
+    # Clear previous status messages
+    generation_status = []
+    
+    # Get form data
+    postype = request.form.get('postype')
+    num_syllables = int(request.form.get('num_syllables', 3))
+    freq_threshold = float(request.form.get('freq_threshold', 5.0))
+    
+    # Detect "all" option automatically
+    include_all_pos = (postype == "all")
+    
+    # Add status messages
+    if include_all_pos:
+        add_status_message(f"Analyzing syllables for ALL parts of speech, {num_syllables} syllables")
+    else:
+        add_status_message(f"Analyzing syllables with parameters: POS={postype}, Syllables={num_syllables}")
+    
+    try:
+        # Check if lexicons are loaded
+        if not lexicons_loaded:
+            error_message = 'Lexicons not loaded. Please load lexicons first.'
+            add_status_message(f"ERROR: {error_message}")
+            return jsonify({
+                'success': False,
+                'message': error_message,
+                'status': generation_status
+            })
+        
+        if include_all_pos:
+            # Combine syllables from all POS types
+            all_last_syllables = set()
+            postypes = ["noun", "verb", "adj", "adv", "prep"]
+            syllables_found = False
+            
+            for pos in postypes:
+                try:
+                    # Get syllable dictionary for this POS
+                    syldict = generator.get_syllable_dict(
+                        postype=pos,
+                        num_syllables=num_syllables,
+                        freq_threshold=freq_threshold,
+                        status_callback=add_status_message
+                    )
+                    
+                    if syldict and num_syllables in syldict:
+                        # Add last syllables from this POS
+                        pos_syllables = set(syldict[num_syllables])
+                        all_last_syllables.update(pos_syllables)
+                        add_status_message(f"Added {len(pos_syllables)} syllables from {pos}")
+                        syllables_found = True
+                    else:
+                        add_status_message(f"No syllables found for {pos}")
+                        
+                except Exception as e:
+                    add_status_message(f"Error loading syllables for {pos}: {str(e)}")
+                    continue
+            
+            if not syllables_found:
+                error_message = "Could not find syllables for any part of speech with the current parameters"
+                add_status_message(f"ERROR: {error_message}")
+                return jsonify({
+                    'success': False,
+                    'message': error_message,
+                    'status': generation_status
+                })
+            
+            last_syllables = sorted(list(all_last_syllables))
+            add_status_message(f"Combined total: {len(last_syllables)} unique last syllables from all POS")
+            
+        else:
+            # Get syllable dictionary for single POS
+            syldict = generator.get_syllable_dict(
+                postype=postype,
+                num_syllables=num_syllables,
+                freq_threshold=freq_threshold,
+                status_callback=add_status_message
+            )
+            
+            if not syldict:
+                error_message = "Could not generate syllable dictionary"
+                return jsonify({
+                    'success': False,
+                    'message': error_message,
+                    'status': generation_status
+                })
+            
+            last_syllables = sorted(list(syldict[num_syllables]))
+        
+        add_status_message(f"Found {len(last_syllables)} options for last syllable position")
+        
+        return jsonify({
+            'success': True,
+            'last_syllables': last_syllables,
+            'status': generation_status
+        })
+        
+    except Exception as e:
+        add_status_message(f"Error getting syllables: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': str(e),
+            'status': generation_status
+        })
+
 @app.route('/generate', methods=['POST'])
 def generate():
     """Generate pseudowords with the given parameters"""
@@ -427,9 +641,21 @@ def generate():
     sim_threshold = float(request.form.get('sim_threshold', 0.8))
     max_words = int(request.form.get('max_words', 20))
     
+    # Get included last syllables
+    included_last_syllables_str = request.form.get('included_last_syllables')
+    included_last_syllables = None
+    if included_last_syllables_str:
+        try:
+            included_last_syllables = json.loads(included_last_syllables_str)
+        except json.JSONDecodeError:
+            add_status_message("Error parsing included last syllables, using all syllables")
+    
     # Add status messages
     add_status_message(f"Starting generation with parameters: POS={postype}, Syllables={num_syllables}")
     add_status_message(f"Frequency threshold: {freq_threshold}, Similarity threshold: {sim_threshold}")
+    
+    if included_last_syllables:
+        add_status_message(f"Using {len(included_last_syllables)} selected last syllables")
     
     try:
         # Check if lexicons are loaded
@@ -459,6 +685,7 @@ def generate():
                     freq_threshold=freq_threshold,
                     sim_threshold=sim_threshold,
                     max_words=words_per_type,
+                    included_last_syllables=included_last_syllables,
                     status_callback=add_status_message
                 )
                 generated_words.extend(pos_words)
@@ -472,6 +699,7 @@ def generate():
                 freq_threshold=freq_threshold,
                 sim_threshold=sim_threshold,
                 max_words=max_words,
+                included_last_syllables=included_last_syllables,
                 status_callback=add_status_message
             )
             add_status_message(f"Generated {len(generated_words)} {postype} pseudowords")
@@ -495,6 +723,50 @@ def generate():
         
     except Exception as e:
         add_status_message(f"Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': str(e),
+            'status': generation_status
+        })
+
+@app.route('/apply_stress_rules', methods=['POST'])
+def apply_stress_rules():
+    """Apply stress rules to pseudowords"""
+    global generation_status
+    
+    try:
+        # Get the input data
+        data = request.get_json()
+        words = data.get('words', [])
+        part_of_speech = data.get('part_of_speech', 'All')
+        
+        if not words:
+            return jsonify({
+                'success': False,
+                'message': 'No words provided'
+            })
+        
+        # Apply stress to each word
+        stressed_words = []
+        for word in words:
+            try:
+                stressed_word = add_random_stress(word, part_of_speech)
+                stressed_words.append(stressed_word)
+            except Exception as e:
+                # If stress application fails, add the word without stress
+                stressed_words.append(word)
+                add_status_message(f"Warning: Could not apply stress to '{word}': {str(e)}")
+        
+        add_status_message(f"Applied stress rules to {len(stressed_words)} words")
+        
+        return jsonify({
+            'success': True,
+            'stressed_words': stressed_words,
+            'status': generation_status
+        })
+        
+    except Exception as e:
+        add_status_message(f"Error applying stress rules: {str(e)}")
         return jsonify({
             'success': False,
             'message': str(e),
@@ -547,6 +819,14 @@ def download_csv():
             sim_threshold = float(request.form.get('sim_threshold', 0.8))
             max_words = int(request.form.get('max_words', 20))
             
+            included_last_syllables_str = request.form.get('included_last_syllables')
+            
+            try:
+                included_last_syllables = json.loads(included_last_syllables_str) if included_last_syllables_str else None
+            except json.JSONDecodeError:
+                included_last_syllables = None
+                add_status_message("Error parsing included last syllables, using all syllables")
+            
             # Generate pseudowords
             if postype == "all":
                 postypes = ["noun", "verb", "adj", "adv", "prep"]
@@ -560,6 +840,7 @@ def download_csv():
                         freq_threshold=freq_threshold,
                         sim_threshold=sim_threshold,
                         max_words=words_per_type,
+                        included_last_syllables=included_last_syllables,
                         status_callback=add_status_message
                     )
                     pseudowords.extend(pos_words)
@@ -570,6 +851,7 @@ def download_csv():
                     freq_threshold=freq_threshold,
                     sim_threshold=sim_threshold,
                     max_words=max_words,
+                    included_last_syllables=included_last_syllables,
                     status_callback=add_status_message
                 )
         
